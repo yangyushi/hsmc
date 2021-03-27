@@ -59,9 +59,6 @@ VerletList<T>::VerletList(double r_cut, double r_skin)
         dr_sq_ = pow(rl_ - rc_, 2);
 }
 
-/*
- * Build Verlet list without any periodic boundary
- */
 template<class T>
 void VerletList<T>::build(const T& positions){
     double d2{0};
@@ -84,9 +81,6 @@ void VerletList<T>::build(const T& positions){
     point_size_ = point_.size(); // particle number + 1
 }
 
-/*
- * Build Verlet list with custom boundary
- */
 template<class T>
 void VerletList<T>::build(const T& positions, const PBC<T>& boundary){
     double d2{0};
@@ -109,10 +103,15 @@ void VerletList<T>::build(const T& positions, const PBC<T>& boundary){
     point_size_ = point_.size(); // particle number + 1
 }
 
-/*
- * dump the current phase point to an xyz file
- * it works with both 2D and 3D system
- */
+template<class T>
+vector<int> VerletList<T>::get_neighbours(int i){
+    vector<int> result {};
+    for (int k = point_[i]; k < point_[i+1]; k++){
+        result.push_back(nlist_[k]);
+    }
+    return result;
+}
+
 template<class T>
 void dump(const T& system, string filename){
     ofstream f;
@@ -140,11 +139,6 @@ void dump(const T& system, string filename){
 }
 
 
-/*
- * load the phase point from the *last* frame of an xyz file
- * it works with both 2D and 3D system
- * The xyz file should be generated with the `dump` function
- */
 template<class T>
 void load(T& system, string filename){
     ifstream f;
@@ -203,8 +197,40 @@ void load(T& system, string filename){
     } else {
         throw("invalid dimension");
     }
-    system.rebuild();  // rebuild the neighbour list
+    system.rebuild_nlist();  // rebuild the neighbour list
     f.close();
 }
 
+
+template<class T>
+void recursive_product(
+    const vector<vector<T>>& arrays, vector<vector<T>>& result, int idx=0
+){
+    if (idx == arrays.size()) {
+        return;
+    }
+    else if (idx == 0){
+        for (auto val : arrays[0]){
+            result.push_back( vector<T> {val} );
+        }
+    } else {
+        vector<vector<T>> new_result;
+        for (auto x : result){  // {1}, {2}
+            for (auto val : arrays[idx]){
+                x.push_back(val);
+                new_result.push_back(x);
+                x.pop_back();
+            }
+        }
+        result = new_result;
+    }
+    recursive_product(arrays, result, ++idx);
+}
+
+template<class T>
+vector<vector<T>> product_nd(const vector<vector<T>>& arrays){
+    vector<vector<T>> result;
+    recursive_product(arrays, result);
+    return result;
+}
 

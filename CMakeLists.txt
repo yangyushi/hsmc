@@ -10,7 +10,7 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -fPIC")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
@@ -28,3 +28,8 @@ add_library(chard_sphere MODULE src/chard_sphere.cpp)
 target_link_libraries(chard_sphere PRIVATE pybind11::module pybind11::lto Eigen3::Eigen hard_sphere)
 pybind11_extension(chard_sphere)
 set_target_properties(chard_sphere PROPERTIES CXX_VISIBILITY_PRESET "hidden")
+
+# move the libraries to lib folder
+SET(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/lib)
+install(TARGETS chard_sphere DESTINATION ${CMAKE_INSTALL_PREFIX})
+install(TARGETS hard_sphere DESTINATION ${CMAKE_INSTALL_PREFIX})

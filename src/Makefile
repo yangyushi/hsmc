@@ -10,7 +10,7 @@ hard_sphere.o: hard_sphere.cpp hard_sphere.hpp
 
 
 test: test.cpp hard_sphere.o
-	rm -f test.xyz
+	rm -f *.xyz
 	$(CC) $(CPPFLAGS) test.cpp hard_sphere.o -o test
 	time ./test
-	rm test test.xyz
+	rm test
