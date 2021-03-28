@@ -14,3 +14,4 @@ test: test.cpp hard_sphere.o
 	$(CC) $(CPPFLAGS) test.cpp hard_sphere.o -o test
 	time ./test
 	rm test
+	rm -f *.xyz
