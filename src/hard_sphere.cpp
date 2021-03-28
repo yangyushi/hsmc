@@ -20,9 +20,10 @@ vector<int> unravel_index(int index, const vector<int>& shape) {
 /*
  * Initialise the system by randomly populating the system
  */
-HSMC::HSMC(int n, vector<double> box, vector<bool> is_pbc, double step)
-    : n_{n}, box_{box}, positions_{dim_, n}, step_{step},
-    boundary_{box, is_pbc}, total_disp_{dim_, n} {
+HSMC::HSMC(int n, vector<double> box, vector<bool> is_pbc)
+    : n_{n}, box_{box}, positions_{dim_, n},
+    boundary_{box, is_pbc}, total_disp_{dim_, n}, is_pbc_{is_pbc}{
+    step_ = 1;
     for (int i = 0; i < n_; i++){
         rand_indices_.push_back(i);
     }
@@ -199,8 +200,14 @@ void HSMC::remove_overlap(){
  * Gradually increase the volumn fraction by rescaling the system
  */
 void HSMC::crush(double target_vf, double delta_vf){
-    for (double vf = get_vf(); vf < target_vf; vf += delta_vf){
-        double vf_new = vf + delta_vf;
+    double vf = this->get_vf();
+    double vf_new;
+    while (vf < target_vf){
+        if (target_vf - vf < delta_vf) {
+            vf_new = target_vf;
+        } else {
+            vf_new = vf + delta_vf;
+        }
         double scale = pow(vf / vf_new, 1.0 / 3.0);
         positions_.array() *= scale;
         boundary_.rescale(scale);
@@ -208,6 +215,7 @@ void HSMC::crush(double target_vf, double delta_vf){
         boundary_.fix_position(positions_);
         this->rebuild_nlist();
         this->remove_overlap();
+        vf = vf_new;
         cout << "Crushed to higher volumn fraction, step: " << step_
              << "; vf: " << this->get_vf() * 100 << endl;
         }
@@ -222,4 +230,41 @@ void HSMC::crush(double target_vf, double delta_vf){
     cout << endl;
 }
 
+string HSMC::str() const{
+    ostringstream str_stream;
+    vector<string> side_names {"X", "Y", "Z"};
+    str_stream << "Hard Sphere MC Simulaion, with periodic boundary on ";
+    for (int d = 0; d < dim_; d++){
+        if (is_pbc_[d]){
+            str_stream << side_names[d];
+        }
+    }
+    str_stream << " sides" << endl;
+    str_stream << "N = " << n_ << "; Box = (" << setprecision(4);
+    for (int d = 0; d < dim_; d++){
+        str_stream << box_[d];
+        if (d < 2) {str_stream << ", ";}
+    }
+    str_stream << "); Volumn Fraction = " << get_vf() << endl;
+    return str_stream.str();
+}
 
+string HSMC::repr() const{
+    ostringstream str_stream;
+    vector<string> side_names {"X", "Y", "Z"};
+    str_stream << "Hard Sphere MC Simulaion, with periodic boundary on ";
+    for (int d = 0; d < dim_; d++){
+        if (is_pbc_[d]){
+            str_stream << side_names[d];
+        }
+    }
+    str_stream << " sides" << endl;
+    str_stream << "N = " << n_ << "; Box = (" << setprecision(4);
+    for (int d = 0; d < dim_; d++){
+        str_stream << box_[d];
+        if (d < 2) {str_stream << ", ";}
+    }
+    str_stream << "); Volumn Fraction = " << get_vf() << endl;
+    str_stream << "(address: " << hex << &positions_ << ")" << endl;
+    return str_stream.str();
+}

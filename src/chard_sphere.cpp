@@ -7,7 +7,7 @@ namespace py = pybind11;
 
 PYBIND11_MODULE(chard_sphere, m){
     py::class_<HSMC>(m, "HSMC")
-        .def(py::init<int, vector<double>, vector<bool>, double>())
+        .def(py::init<int, vector<double>, vector<bool>>())
         .def("fill_idea_gas", &HSMC::fill_ideal_gas)
         .def("fill_hs", &HSMC::fill_hs)
         .def("crush", &HSMC::crush)
@@ -24,18 +24,6 @@ PYBIND11_MODULE(chard_sphere, m){
             "view_positions", &HSMC::view_positions,
             py::return_value_policy::reference_internal
         )
-        .def(
-            "__repr__",
-            [](const HSMC& obj){
-                ostringstream str_stream;
-                str_stream << "Hard Sphere MC Simulaion, PBC only with XY sides" << endl;
-                str_stream << "N = " << obj.n_ << "; Box = (" << setprecision(4);
-                for (int d = 0; d < obj.dim_; d++){
-                    str_stream << obj.box_[d];
-                    if (d < 2) {str_stream << ", ";}
-                }
-                str_stream << "); Volumn Fraction = " << obj.get_vf() << endl;
-                return str_stream.str();
-            }
-        );
+        .def("__repr__", [](const HSMC& obj){ return obj.repr();})
+        .def("__str__", [](const HSMC& obj){ return obj.str();} );
 }

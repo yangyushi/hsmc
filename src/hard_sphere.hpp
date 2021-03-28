@@ -146,7 +146,7 @@ void load(T& system, string filename);
  */
 class HSMC{
     public:
-        HSMC(int n, vector<double> box, vector<bool> is_pbc, double step);
+        HSMC(int n, vector<double> box, vector<bool> is_pbc);
         int dim_ = 3;
         int n_;
         vector<double> box_;
@@ -173,12 +173,15 @@ class HSMC{
             positions_ = positions;
             this->rebuild_nlist();
         }
+        string repr() const;
+        string str() const;
     private:
         double step_;  // maximum random movement
         PBC<Coord3D> boundary_;
         Coord3D total_disp_;  // total diplacements of each particle
+        vector<bool> is_pbc_;
         vector<int> rand_indices_;
-        VerletList<Coord3D> vlist_{1.0, 5.0};
+        VerletList<Coord3D> vlist_{1.0, 3.0};
         int ldi_ = 0;  // largest displacement index
         vector<array<int, 2>> get_overlap_indices();
         vector<int> get_neighbours(int i){
