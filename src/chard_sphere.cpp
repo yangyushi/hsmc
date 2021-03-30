@@ -16,6 +16,7 @@ PYBIND11_MODULE(chard_sphere, m){
         .def("get_vf", &HSMC::get_vf)
         .def("load_positions", &HSMC::load_positions)
         .def("copy_positions", &HSMC::get_positions)
+        .def("set_indices", &HSMC::set_indices)
         .def(
             "get_positions", &HSMC::get_positions,
             py::return_value_policy::reference_internal

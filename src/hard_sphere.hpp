@@ -167,6 +167,10 @@ class HSMC{
         /*
          * these functions were created for the python end
          */
+        void set_indices(const vector<int>& indices){
+            rand_indices_ = indices;
+            this->shuffle_indices();
+        }  // reset the rand_indices_
         Coord3D& get_positions() {return positions_;}
         const Coord3D& view_positions() const {return positions_;}
         void load_positions(Coord3D positions){
