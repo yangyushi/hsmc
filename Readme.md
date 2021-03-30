@@ -3,8 +3,7 @@
 
 ## Install
 
-
-The project can be built with CMake, normally you will do,
+You need to have [Eigen](https://eigen.tuxfamily.org/index.php?title=Main_Page) and [pybind11](https://pybind11.readthedocs.io/en/stable/) to build the code. The project can be built with CMake, normally you will do,
 
 ```sh
 mkdir build
@@ -16,6 +15,8 @@ make install
 
 As a result, the python module (with name `chard_sphere.cpython-xx-xxx.so`) will be created in folder `lib`, as well as the static C++ library (`libhard_sphere.a`).
 
+## Python Frontend
+
 The user is expceted to interact with the library via the Python interface. Typically, one shuold
 
 1. copy the file `chard_sphere.cpython-xx-xxx.so` to the working directory; or
@@ -24,7 +25,7 @@ The user is expceted to interact with the library via the Python interface. Typi
 After that, you should be able to execute the command `import chard_sphere` in Python.
 
 
-## Use the Code
+## Use the Code in Python
 
 The following snippest present the way to start a simulation
 
