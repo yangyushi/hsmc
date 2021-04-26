@@ -1,5 +1,8 @@
-from itertools import product
+#!/usr/bin/env python
+import re
 import numpy as np
+from itertools import product
+
 
 crystal_info = {
     "cubic": {
@@ -17,7 +20,7 @@ crystal_info = {
         "motif": np.array(((0, 0, 0), (0.5, 0.5, 0), (0.5, 0, 0.5), (0, 0.5, 0.5))),
         "lattice_points": 4,
     },
-    "hcp": {
+    "hcp": {  # assuming close packing 
         "unit_cell": [1, 1, np.sqrt(8/3), 90, 90, 120],
         "motif": np.array(((0, 0, 0), (1.0/3.0, 1.0/3.0, 0.5))),
         "lattice_points": 2,
@@ -41,7 +44,7 @@ plane_info = {
 }
 
 
-def get_transformation_matrix_3d(cell_vector):
+def __get_transformation_matrix_3d(cell_vector):
     """
     this function generate a transform matrix for a set of cell_vector
     cell vector is a list, [a, b, c, <bc>, <ac>, <ab>]
@@ -61,17 +64,17 @@ def get_transformation_matrix_3d(cell_vector):
     ])
 
 
-def index2pos_3d(indice, unit_cell):
+def __index2pos_3d(indice, unit_cell):
     """
     Translate the lattice basis to Cartesian coordinates
     """
-    tm = get_transformation_matrix_3d(unit_cell)  # transform matrix
+    tm = __get_transformation_matrix_3d(unit_cell)  # transform matrix
     im = np.asmatrix(indice).T  # index matrix
     pm = (tm * im).T  # position matrix
     return np.array(pm)
 
 
-def get_transformation_matrix_2d(cell_vector):
+def __get_transformation_matrix_2d(cell_vector):
     """
     this function generate a transform matrix for a set of cell_vector
     cell vector is a list, [a, b, c, <bc>, <ac>, <ab>]
@@ -84,19 +87,30 @@ def get_transformation_matrix_2d(cell_vector):
     ])
 
 
-def index2pos_2d(indice, unit_cell):
+def __index2pos_2d(indice, unit_cell):
     """
     Translate the lattice basis to Cartesian coordinates
     """
-    tm = get_transformation_matrix_2d(unit_cell)  # transform matrix
+    tm = __get_transformation_matrix_2d(unit_cell)  # transform matrix
     im = np.asmatrix(indice).T  # index matrix
     pm = (tm * im).T  # position matrix
     return np.array(pm)
 
 
-def get_crystal(kind, nx, ny, nz):
+def get_crystal_lattice(kind, nx, ny, nz):
     """
-    Get the position of common 3D crystals
+    Get the position of common 3D crystals lattices. The lattice points
+        were obtained by repeated unit cell. The unit cells were defined
+        in the `crystal_info`.
+
+    Arguments:
+        kind (str): the type of crystals to get
+        nx (int): the number of unit cells in x direction
+        ny (int): the number of unit cells in y direction
+        nz (int): the number of unit cells in z direction
+
+    Return:
+        numpy.ndarray: the positions of the lattice points, shape (n, 3)
     """
     indices_x = np.arange(nx)
     indices_y = np.arange(ny)
@@ -108,15 +122,25 @@ def get_crystal(kind, nx, ny, nz):
         n_motif = len(crystal['motif'])
         motif_indices = np.expand_dims(crystal['motif'], axis=0) + np.expand_dims(indices, axis=1)
         motif_indices = motif_indices.reshape((n_indices * n_motif, 3), order='F')
-        pos = index2pos_3d(motif_indices, crystal["unit_cell"])
+        pos = __index2pos_3d(motif_indices, crystal["unit_cell"])
         return pos
     else:
         raise ValueError("Invalid crystal type", kind)
 
 
-def get_plane(kind, nx, ny):
+def get_plane_lattice(kind, nx, ny):
     """
-    Get the position of common 2D crystal planes
+    Get the position of common 2D crystals lattices. The lattice points
+        were obtained by repeated unit cell. The unit cells were defined
+        in the `plane_info`.
+
+    Arguments:
+        kind (str): the type of crystals to get
+        nx (int): the number of unit cells in x direction
+        ny (int): the number of unit cells in y direction
+
+    Return:
+        numpy.ndarray: the positions of the lattice points, shape (n, 3)
     """
     indices_x = np.arange(nx)
     indices_y = np.arange(ny)
@@ -127,18 +151,51 @@ def get_plane(kind, nx, ny):
         n_motif = len(plane['motif'])
         motif_indices = np.expand_dims(plane['motif'], axis=0) + np.expand_dims(indices, axis=1)
         motif_indices = motif_indices.reshape((n_indices * n_motif, 2), order='F')
-        pos = index2pos_2d(motif_indices, plane["unit_cell"])
+        pos = __index2pos_2d(motif_indices, plane["unit_cell"])
         return pos
     else:
         raise ValueError("Invalid crystal type", kind)
 
+
+def get_plane(kind, nx, ny, vf, sigma=1):
+    """
+    Get the position of common crystal planes. The particles were obtained
+        by repeated unit cell. The unit cells were defined in the `plane_info`,
+        whose size is determined by the volume fraction.
+
+    Arguments:
+        kind (str): the type of crystals to get.
+        nx (int): the number of unit cells in x direction.
+        ny (int): the number of unit cells in y direction.
+        vf (float): the corresponding volume fraction of the 3D crystal.
+        sigma (float): the diameter of the particles
+
+    Return:
+        tuple: (positions, box)
+            - the positions of the particles, shape (n, 3)
+            - box: the box that contains the particles
+    """
+    crystal_pattern = re.match(r'([a-z]+)\d*', kind.lower())
+    if crystal_pattern:
+        crystal_kind = crystal_pattern.group(1)
+        is_valid = (crystal_kind in crystal_info) and (kind in plane_info)
+        if is_valid:
+            n = crystal_info[crystal_kind]['lattice_points']
+            a = np.power(n * np.pi * sigma**3 / 6.0 / vf, 1.0 / 3.0)
+            lattice = get_plane_lattice(kind, nx, ny)
+            box = np.array((nx, ny)) * a * np.array(plane_info[kind]['unit_cell'][:2])
+            return lattice * a, box
+        else:
+            raise ValueError("Invalid crystal type: " + kind)
+    else:
+        raise ValueError("Can't find crystal from token: " + kind)
 
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     for name, crystal in crystal_info.items():
-        pos = get_crystal(name, 3, 3, 2)
+        pos = get_crystal_lattice(name, 3, 3, 2)
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
         ax.set_title(name)
@@ -146,12 +203,10 @@ if __name__ == "__main__":
         plt.show()
 
     for name, crystal in plane_info.items():
-        pos = get_plane(name, 3, 3)
+        pos = get_plane_lattice(name, 3, 3)
         plt.figure(figsize=(4, 4))
         plt.title(name)
         plt.scatter(*pos.T, s=100)
         plt.tight_layout()
-        #plt.xlim(0, 4)
-        #plt.ylim(0, 4)
         plt.tight_layout()
         plt.show()
