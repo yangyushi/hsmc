@@ -51,24 +51,37 @@ class PBC{
             if (box_.size() != is_pbc_.size()) {
                 throw("PBC box size mismatch");
             }
-            update_volumn();
+            update_volume();
             dim_ = box_.size();
         }
         vector<double> box_;
         void fix_position(T& positions) const;
         void fix_position(T& positions, int i) const;
         double get_dist_sq(const T& positions, int i, int j) const;
+
         // rescale the box homogeneously
         void rescale(double scale){
             for (auto& side : box_) {
                 side *= scale;
             }
-            this->update_volumn();
+            this->update_volume();
         }
-        double volumn_;
+        
+        // rescale the box along one axis
+        void rescale(double scale, int axis){
+            if (axis < dim_){
+                box_[axis] *= scale;
+                this->update_volume();
+            } else {
+                throw("Trying to rescale with invalid axis index");
+            }
+        }
+
+        double volume_;
+
     private:
         int dim_;
-        void update_volumn();
+        void update_volume();
         vector<bool> is_pbc_;
 };
 
@@ -119,7 +132,14 @@ class CellList{
         CellList(double r_cut, vector<double> box, vector<bool> is_pbc);
         void build(const T& positions);
     private:
-        PBC<T> boundadry_;
+        int dim_;
+        double r_cut_;
+        int sc_;
+        int size_;
+        vector<int> head_shape_;
+        vector<double> box_;
+        vector<bool> is_pbc_;
+        PBC<T> boundary_;
 };
 
 
@@ -146,7 +166,7 @@ void load(T& system, string filename);
  */
 class HSMC{
     public:
-        HSMC(int n, vector<double> box, vector<bool> is_pbc);
+        HSMC(int n, vector<double> box, vector<bool> is_pbc, vector<bool> is_hard);
         int dim_ = 3;
         int n_;
         vector<double> box_;
@@ -155,22 +175,34 @@ class HSMC{
         void fill_ideal_gas(); // radomly fill the box with ideal gas 
         void fill_hs(); // radomly fill the box with hard spheres
         void sweep();  // try to make N movements
-        void crush(double target_vf, double delta_vf);  // rescale box to the target vf
-        inline double get_vf() const{  // get the volumn fraction
-            return (double) n_ / boundary_.volumn_ / 6 * M_PI;
+
+        // rescale box to the target volume fraction
+        void crush(double target_vf, double delta_vf);
+
+        // rescale on side of the box to the target volume fraction
+        void crush_along_axis(double target_vf, double delta_vf, int axis);
+
+        // get the volume fraction
+        inline double get_vf() const{
+            return (double) n_ / boundary_.volume_ / 6 * M_PI;
         }
+
         // rebuild the neighbour list
         inline void rebuild_nlist(){
             vlist_.build(positions_, boundary_);
             total_disp_.setZero();
         }
+
         /*
          * these functions were created for the python end
          */
         void set_indices(const vector<int>& indices){
             rand_indices_ = indices;
-            this->shuffle_indices();
         }  // reset the rand_indices_
+
+        // check the existence of overlap via brutal force calculation, O(N^2)
+        bool report_overlap();
+
         Coord3D& get_positions() {return positions_;}
         const Coord3D& view_positions() const {return positions_;}
         void load_positions(Coord3D positions){
@@ -179,11 +211,14 @@ class HSMC{
         }
         string repr() const;
         string str() const;
+
     private:
         double step_;  // maximum random movement
         PBC<Coord3D> boundary_;
         Coord3D total_disp_;  // total diplacements of each particle
         vector<bool> is_pbc_;
+        vector<bool> is_hard_;
+        vector<int> hard_dim_; // dimensions with hard walls
         vector<int> rand_indices_;
         VerletList<Coord3D> vlist_{1.0, 3.0};
         int ldi_ = 0;  // largest displacement index
@@ -191,18 +226,44 @@ class HSMC{
         vector<int> get_neighbours(int i){
             return vlist_.get_neighbours(i);
         }
-        // try to move 1 paticle, return if succeed
+
+        /*
+         * Move a particle randomly, only accept without overlap.
+         * For each movement, also keep a record of the total displacement
+         *   for updating the neighbour list
+         */
         bool advance(int idx);
-        // try to remove all the overlapped particles
+
+        // Try to remove all the overlapped particles
         void remove_overlap(); 
-        // randomly change the order of movement during a sweep
+
+        // Randomly change the order of movement during a sweep
         void shuffle_indices();
-        // check if one particle is overlapping
+
+        // Check if one particle is overlapping
         bool check_overlap(int idx);
-        // check if overlap exist at all
+
+        /*
+         * Check if overlap exist at all, the fixed particles were allowed
+         *   to overlap
+         */
         bool check_overlap();
-        // check if the verlet list needs update, after moveing a single particle
+
+        // Check if overlap with hard boundaries
+        bool check_hardwall();
+
+        // Check if particle idx overlap with hard boundaries
+        bool check_hardwall(int idx);
+
+        /*
+         * Check if the verlet list needs update after moveing a single particle
+         */
         void check_disp_sum(int idx, const Vec3D& disp);
+
+        /*
+         * Adjust the movement step based on the accptance ratio
+         *   following Allen & Tildesley's liquid simulation book
+         */
         void adjust_step(int accept_number);
 };
 

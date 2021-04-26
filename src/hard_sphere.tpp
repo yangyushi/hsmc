@@ -1,8 +1,8 @@
 template<class T>
-void PBC<T>::update_volumn(){
-    volumn_ = 1;
+void PBC<T>::update_volume(){
+    volume_ = 1;
     for (auto size : box_){
-        volumn_ *= size;
+        volume_ *= size;
     }
 }
 
@@ -233,4 +233,23 @@ vector<vector<T>> product_nd(const vector<vector<T>>& arrays){
     recursive_product(arrays, result);
     return result;
 }
+
+
+
+template<class T>
+CellList<T>::CellList(double r_cut, vector<double> box, vector<bool> is_pbc)
+    : r_cut_{r_cut}, box_{box}, is_pbc_{is_pbc},
+      boundary_{box, is_pbc} {
+    dim_ = box.size();
+    size_ = 0;
+    sc_ = 1;
+    // sc_ = floor(side_min / r_cut_ / 2);
+    if (sc_ < 1) {
+        sc_ = 1;
+    }
+    for (int d = 0; d < dim_; d++){
+        head_shape_[d] = sc_;
+    }
+}
+
 

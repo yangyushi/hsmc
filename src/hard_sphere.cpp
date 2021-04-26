@@ -20,15 +20,21 @@ vector<int> unravel_index(int index, const vector<int>& shape) {
 /*
  * Initialise the system by randomly populating the system
  */
-HSMC::HSMC(int n, vector<double> box, vector<bool> is_pbc)
+HSMC::HSMC(int n, vector<double> box, vector<bool> is_pbc, vector<bool> is_hard)
     : n_{n}, box_{box}, positions_{dim_, n},
-    boundary_{box, is_pbc}, total_disp_{dim_, n}, is_pbc_{is_pbc}{
+    boundary_{box, is_pbc}, total_disp_{dim_, n},
+    is_pbc_{is_pbc}, is_hard_{is_hard} {
     step_ = 1;
     for (int i = 0; i < n_; i++){
         rand_indices_.push_back(i);
     }
     total_disp_.setZero();
     this->fill_ideal_gas();
+    for (int d = 0; d < dim_; d++){
+        if (is_hard_[d]){
+            hard_dim_.push_back(d);
+        }
+    }
 }
 
 void HSMC::shuffle_indices(){
@@ -37,14 +43,13 @@ void HSMC::shuffle_indices(){
     shuffle(rand_indices_.begin(), rand_indices_.end(), g);
 }
 
-/*
- * Fill the system with random points, pretty useless method
- */
+
+// Fill the system with random points
 void HSMC::fill_ideal_gas(){
     positions_.setRandom(3, n_);  // ~U(-1, 1)
     positions_.array() += 1;  // ~U(0, 2)
     for (int d = 0; d < dim_; d++){
-        positions_.row(d) *= boundary_.box_[d] / 2;  // ~U(0, box)
+        positions_.row(d) *= box_[d] / 2;  // ~U(0, box)
     }
 }
 
@@ -55,13 +60,13 @@ void HSMC::fill_hs(){
             "Initial Volumn Fraction > 0.3, can't randomly initialise"
         );
     }
-    for (int i = 0; i < n_; i++){
+    for (auto i : rand_indices_){
         bool is_overlap = true;
         while (is_overlap) {
             is_overlap = false;
-            positions_.col(i) = Eigen::MatrixXd::Random(3, 1).array() + 1;
+            positions_.col(i) = Eigen::MatrixXd::Random(3, 1).array() + 1; // ~U(0, 2)
             for (int d = 0; d < dim_; d++){
-                positions_(d, i) *= boundary_.box_[d] / 2;  // ~U(0, box)
+                positions_(d, i) *= box_[d] / 2.0;  // ~U(0, box)
             }
             for (int j = 0; j < i; j++){
                 if (boundary_.get_dist_sq(positions_, i, j) < 1){
@@ -75,11 +80,56 @@ void HSMC::fill_hs(){
 }
 
 
+bool HSMC::check_hardwall(){
+    for (auto d : hard_dim_){  // check overlap with hard walls
+        for (int i = 0; i < n_ - 1; i++){
+            if (positions_(d, i) < 0) {
+                return true;
+            }
+            if (positions_(d, i) > box_[d]) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool HSMC::check_hardwall(int idx){
+    for (auto d : hard_dim_){  // check overlap with hard walls
+        if (positions_(d, idx) < 0) {
+            return true;
+        }
+        if (positions_(d, idx) > box_[d]) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+
+bool HSMC::report_overlap(){
+    for (int i = 0; i < n_ - 1; i++){
+        if (this->check_hardwall(i)){
+            return true;
+        }
+        for (int j = i + 1; j < n_; j++){  // check overlap with other particles
+            if (boundary_.get_dist_sq(positions_, i, j) < 1){
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+
 bool HSMC::check_overlap(int i){
-    if ((positions_(2, i) < 0) or (positions_(2, i) > boundary_.box_[2])) {
+    double dist_sq = 0;
+
+    if (this->check_hardwall(i)) {
         return true;
     }
-    double dist_sq = 0;
+
     for (auto j : this->get_neighbours(i)){
         dist_sq = boundary_.get_dist_sq(positions_, i, j);
         if (dist_sq < 1){
@@ -89,11 +139,11 @@ bool HSMC::check_overlap(int i){
     return false;
 }
 
-
 bool HSMC::check_overlap(){
     double dist_sq = 0;
-    for (int i = 0; i < n_; i++){
-        if ((positions_(2, i) < 0) or (positions_(2, i) > boundary_.box_[2])) {
+
+    for (int i : rand_indices_){
+        if (this->check_hardwall(i)) {
             return true;
         }
         for (auto j : this->get_neighbours(i)){
@@ -106,10 +156,6 @@ bool HSMC::check_overlap(){
     return false;
 }
 
-/*
- * Move a particle randomly, only accept without overlap.
- * keep a record of the total displacement for updating the neighbour list
- */
 bool HSMC::advance(int idx){
     Vec3D previous_pos = positions_.col(idx);
     Vec3D disp = Eigen::MatrixXd::Random(3, 1) * step_ / 2.0;
@@ -125,9 +171,6 @@ bool HSMC::advance(int idx){
     }
 }
 
-/*
- * Check the largest and second largest total displacement for updating the Verlet list
- */
 void HSMC::check_disp_sum(int idx, const Vec3D& disp){
     total_disp_.col(idx) += disp;
     double disp_sq = total_disp_.col(idx).squaredNorm();
@@ -142,10 +185,6 @@ void HSMC::check_disp_sum(int idx, const Vec3D& disp){
     }
 }
 
-/*
- * Adjust the movement step based on the accptance ratio
- *   following Allen & Tildesley's liquid simulation book
- */
 void HSMC::adjust_step(int accept_number){
     double accept_ratio = (double) accept_number / n_;
     if (accept_ratio < 0.45) {
@@ -197,7 +236,7 @@ void HSMC::remove_overlap(){
 }
 
 /*
- * Gradually increase the volumn fraction by rescaling the system
+ * Gradually increase the volume fraction by rescaling the system
  */
 void HSMC::crush(double target_vf, double delta_vf){
     double vf = this->get_vf();
@@ -216,13 +255,51 @@ void HSMC::crush(double target_vf, double delta_vf){
         this->rebuild_nlist();
         this->remove_overlap();
         vf = vf_new;
-        cout << "Crushed to higher volumn fraction, step: " << step_
+        cout << "Crushed to higher volume fraction, step: " << step_
              << "; vf: " << this->get_vf() * 100 << endl;
         }
 
     cout << "final box size: ";
     for (int d = 0; d < dim_; d++){
-        cout << boundary_.box_[d];
+        cout << box_[d];
+        if (d != dim_){
+            cout << ", ";
+        }
+    }
+    cout << endl;
+}
+
+/*
+ * Gradually increase the volume fraction by rescaling the system
+ */
+void HSMC::crush_along_axis(double target_vf, double delta_vf, int axis){
+    double vf = this->get_vf();
+    double vf_new, scale;
+
+    while (vf < target_vf){
+        if (target_vf - vf < delta_vf) {
+            vf_new = target_vf;
+        } else {
+            vf_new = vf + delta_vf;
+        }
+        scale = vf / vf_new;
+
+        positions_.row(axis).array() *= scale;
+        boundary_.rescale(scale, axis);
+        box_ = boundary_.box_;
+
+        boundary_.fix_position(positions_);
+        this->rebuild_nlist();
+        this->remove_overlap();
+
+        vf = vf_new;
+        cout << "Crushed to higher volume fraction, step: " << step_
+             << "; vf: " << this->get_vf() * 100 << endl;
+        }
+
+    cout << "final box size: ";
+    for (int d = 0; d < dim_; d++){
+        cout << box_[d];
         if (d != dim_){
             cout << ", ";
         }
@@ -240,7 +317,7 @@ string HSMC::str() const{
         }
     }
     str_stream << " sides" << endl;
-    str_stream << "N = " << n_ << "; Box = (" << setprecision(4);
+    str_stream << "N = " << n_ << "; Box = (" << setprecision(8);
     for (int d = 0; d < dim_; d++){
         str_stream << box_[d];
         if (d < 2) {str_stream << ", ";}
@@ -259,7 +336,7 @@ string HSMC::repr() const{
         }
     }
     str_stream << " sides" << endl;
-    str_stream << "N = " << n_ << "; Box = (" << setprecision(4);
+    str_stream << "N = " << n_ << "; Box = (" << setprecision(8);
     for (int d = 0; d < dim_; d++){
         str_stream << box_[d];
         if (d < 2) {str_stream << ", ";}
