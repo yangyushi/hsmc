@@ -30,6 +30,6 @@ pybind11_extension(chard_sphere)
 set_target_properties(chard_sphere PROPERTIES CXX_VISIBILITY_PRESET "hidden")
 
 # move the libraries to lib folder
-SET(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/lib)
+SET(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/lib/hsmc)
 install(TARGETS chard_sphere DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(TARGETS hard_sphere DESTINATION ${CMAKE_INSTALL_PREFIX})
+install(TARGETS hard_sphere DESTINATION ${CMAKE_SOURCE_DIR}/lib)
