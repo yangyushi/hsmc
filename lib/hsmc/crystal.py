@@ -157,7 +157,7 @@ def get_plane_lattice(kind, nx, ny):
         raise ValueError("Invalid crystal type", kind)
 
 
-def get_plane(kind, nx, ny, vf, sigma=1):
+def get_plane(kind, nx, ny, vf, sigma=1, report=True):
     """
     Get the position of common crystal planes. The particles were obtained
         by repeated unit cell. The unit cells were defined in the `plane_info`,
@@ -184,6 +184,8 @@ def get_plane(kind, nx, ny, vf, sigma=1):
             a = np.power(n * np.pi * sigma**3 / 6.0 / vf, 1.0 / 3.0)
             lattice = get_plane_lattice(kind, nx, ny)
             box = np.array((nx, ny)) * a * np.array(plane_info[kind]['unit_cell'][:2])
+            if report:
+                print(f"Creating {kind} plane with size of {box[0]:.4f} x {box[1]:.4f}, N = {len(lattice)}")
             return lattice * a, box
         else:
             raise ValueError("Invalid crystal type: " + kind)
