@@ -22,7 +22,7 @@ The user is expceted to interact with the library via the Python interface. Typi
 1. copy the file `chard_sphere.cpython-xx-xxx.so` to the working directory; or
 2. add the folder `lib` to `$PYTHONPATH`.
 
-After that, you should be able to execute the command `import chard_sphere` in Python.
+After that, you should be able to execute the command `from hsmc import chard_sphere` in Python.
 
 
 ## Use the Code in Python
@@ -30,7 +30,7 @@ After that, you should be able to execute the command `import chard_sphere` in P
 The following snippest present the way to start a simulation
 
 ```py
-import chard_sphere
+from hsmc import chard_sphere
 
 
 n_particle = 500
@@ -56,3 +56,7 @@ for _ in range(100):
 # retrieve the positions of the particles
 positions = system.get_positions()
 ```
+
+## Other utilities in Python Module
+
+The `hsmc` module in the lib folder contains other handy tools. For instance a very fast `XYZ` file parser, and some crystallography related functions.
