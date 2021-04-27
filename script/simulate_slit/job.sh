@@ -10,6 +10,14 @@ if [ $PBS_O_WORKDIR ]; then
     cd $PBS_O_WORKDIR
 fi
 
+if [[ ! -d result ]]; then
+    mkdir result
+fi
+
+if [[ ! -d tcc ]]; then
+    mkdir tcc
+fi
+
 ./clean
 python3 simulate.py
 mv *.png result
