@@ -1,0 +1,4 @@
+# find the path of hsmc
+SN=${0##*/}  # script name
+hsmc=${0%/bin/$SN}  # path to hsmc
+cp -r "$hsmc/script/simulate_slit" "$PWD"
