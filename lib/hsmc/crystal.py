@@ -103,7 +103,7 @@ def get_crystal_lattice(kind, nx, ny, nz):
         were obtained by repeated unit cell. The unit cells were defined
         in the `crystal_info`.
 
-    Arguments:
+    Args:
         kind (str): the type of crystals to get
         nx (int): the number of unit cells in x direction
         ny (int): the number of unit cells in y direction
@@ -134,7 +134,7 @@ def get_plane_lattice(kind, nx, ny):
         were obtained by repeated unit cell. The unit cells were defined
         in the `plane_info`.
 
-    Arguments:
+    Args:
         kind (str): the type of crystals to get
         nx (int): the number of unit cells in x direction
         ny (int): the number of unit cells in y direction
@@ -157,14 +157,53 @@ def get_plane_lattice(kind, nx, ny):
         raise ValueError("Invalid crystal type", kind)
 
 
+def parse_plane_kind(kind):
+    """
+    Get the crystal name from the kind of the plane
+
+    Args:
+        kind (str): the type of plane to get, e.g. fcc111
+
+    Return:
+        str: the type of corresponding crystal, e.g. fcc
+    """
+    crystal_pattern = re.match(r'([a-z]+)\d*', kind.lower())
+    if crystal_pattern:
+        crystal_kind = crystal_pattern.group(1)
+        is_valid = (crystal_kind in crystal_info) and (kind in plane_info)
+        if is_valid:
+            return crystal_kind
+        else:
+            raise ValueError("Invalid plane type: " + kind)
+    else:
+        raise ValueError("Can't find crystal from token: " + kind)
+
+
+def get_lattice_constant(kind, vf, sigma=1.0):
+    """
+    Get the lattice constant of a crystal at given volume fraction
+
+    Args:
+        kind (str): the type of crystal, e.g. fcc
+        vf (float): the volume fraction, e.g. 0.545
+        sigma (float): the diameter of the particles.
+
+    Result:
+        float: the lattice constant
+    """
+    n = crystal_info[kind]['lattice_points']
+    a = np.power(n * np.pi * sigma**3 / 6.0 / vf, 1.0 / 3.0)
+    return a
+
+
 def get_plane(kind, nx, ny, vf, sigma=1, report=True):
     """
     Get the position of common crystal planes. The particles were obtained
         by repeated unit cell. The unit cells were defined in the `plane_info`,
         whose size is determined by the volume fraction.
 
-    Arguments:
-        kind (str): the type of crystals to get.
+    Args:
+        kind (str): the type of plane to get, e.g. fcc111
         nx (int): the number of unit cells in x direction.
         ny (int): the number of unit cells in y direction.
         vf (float): the corresponding volume fraction of the 3D crystal.
@@ -175,22 +214,13 @@ def get_plane(kind, nx, ny, vf, sigma=1, report=True):
             - the positions of the particles, shape (n, 3)
             - box: the box that contains the particles
     """
-    crystal_pattern = re.match(r'([a-z]+)\d*', kind.lower())
-    if crystal_pattern:
-        crystal_kind = crystal_pattern.group(1)
-        is_valid = (crystal_kind in crystal_info) and (kind in plane_info)
-        if is_valid:
-            n = crystal_info[crystal_kind]['lattice_points']
-            a = np.power(n * np.pi * sigma**3 / 6.0 / vf, 1.0 / 3.0)
-            lattice = get_plane_lattice(kind, nx, ny)
-            box = np.array((nx, ny)) * a * np.array(plane_info[kind]['unit_cell'][:2])
-            if report:
-                print(f"Creating {kind} plane with size of {box[0]:.4f} x {box[1]:.4f}, N = {len(lattice)}")
-            return lattice * a, box
-        else:
-            raise ValueError("Invalid crystal type: " + kind)
-    else:
-        raise ValueError("Can't find crystal from token: " + kind)
+    crystal_kind = parse_plane_kind(kind)
+    a = get_lattice_constant(crystal_kind, vf=vf, sigma=sigma)
+    lattice = get_plane_lattice(kind, nx, ny)
+    box = np.array((nx, ny)) * a * np.array(plane_info[kind]['unit_cell'][:2])
+    if report:
+        print(f"Creating {kind} plane with size of {box[0]:.4f} x {box[1]:.4f}, N = {len(lattice)}")
+    return lattice * a, box
 
 
 if __name__ == "__main__":

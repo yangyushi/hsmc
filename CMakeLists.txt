@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # set the project name
-project(Wet VERSION 0.0)
+project(hsmc VERSION 0.0)
 find_package(pybind11 REQUIRED)
 find_package(Eigen3 3.3 REQUIRED)
 
