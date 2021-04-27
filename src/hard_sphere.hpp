@@ -204,6 +204,7 @@ class HSMC{
         bool report_overlap();
 
         Coord3D& get_positions() {return positions_;}
+        vector<double> get_box() {return box_;}
         const Coord3D& view_positions() const {return positions_;}
         void load_positions(Coord3D positions){
             positions_ = positions;

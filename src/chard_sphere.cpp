@@ -19,6 +19,7 @@ PYBIND11_MODULE(chard_sphere, m){
         .def("copy_positions", &HSMC::get_positions)
         .def("set_indices", &HSMC::set_indices)
         .def("report_overlap", &HSMC::report_overlap)
+        .def("get_box", &HSMC::get_box)
         .def(
             "get_positions", &HSMC::get_positions,
             py::return_value_policy::reference_internal
