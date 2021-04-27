@@ -20,7 +20,8 @@ n_particle = int(conf['System']['n'])
 vf_init = float(conf['System']['vf_init'])
 sweep_equilibrium = int(float(conf['Run']['equilibrium']))
 sweep_total = int(float(conf['Run']['total']))
-dump_frequency = int(float(conf['Run']['dump_frequency']))
+dump_frequency_bulk = int(float(conf['Run']['dump_frequency_bulk']))
+nbins = int(conf['Analyse']['nbins'])
 kind = conf['Boundary']['kind']
 
 with open(os.path.join("result", "box.json"), "r") as f:
@@ -54,20 +55,19 @@ hist, _ = np.histogram(z, bins=be)
 plt.plot((z_mid, z_mid), (0, 2), color='k', lw=1)
 plt.plot((0, box[2]), (0, 0), color='k', lw=1)
 
-plt.plot(bc, hist / len(frames) / v_bin, label='Yushi', color='tomato')
+plt.plot(bc, hist / len(frames) / v_bin, color='tomato')
 plt.xlabel('Z / $\sigma$')
 plt.ylabel('Numble Density')
-plt.legend(loc='upper center')
 plt.tight_layout()
 plt.savefig('density.pdf')
+plt.close()
 
 
+bulk_vf = hsmc.analysis.get_bulk_vf(frames, box, jump=1, npoints=50)
 
 if "tcc_bulk.pkl" in os.listdir('result'):
     bulk = pd.read_pickle(os.path.join('result', 'tcc_bulk.pkl'))['Mean Pop Per Frame']
 else:  # find tcc populations in equivalent bulk system
-    bulk_vf = hsmc.analysis.get_bulk_vf(frames, box, jump=5, npoints=50)
-
     L = (np.pi * n_particle / 6 / vf_init) ** (1.0 / 3.0)
     box = [L, L, L]
 
@@ -90,7 +90,7 @@ else:  # find tcc populations in equivalent bulk system
 
     for frame in range(sweep_total):
         system.sweep()
-        if frame % dump_frequency == 0:
+        if frame % dump_frequency_bulk == 0:
             tmp = system.copy_positions().T
             np.savetxt(
                 f_xyz, tmp, delimiter=' ',
@@ -132,7 +132,7 @@ else:  # perform TCC analysis
 #first analysis
 n_frames = len(frames)
 
-bins = np.linspace(0, box[-1], 250)
+bins = np.linspace(-z_mid, z_mid, nbins)
 bc = (bins[1:] + bins[:-1]) / 2
 
 fig, ax = plt.subplots(3, 3)
@@ -145,8 +145,8 @@ tcc_names['sp5c'] = '7A'
 
 for i, key in enumerate(['sp3c', '6A', 'sp5c', '8B', '8A', '9B', '10B', 'FCC', 'HCP']):
     count = np.concatenate(tcc_dicts[key], axis=0).ravel().astype(int)
-    stat_tcc, _, _ = binned_statistic( x=z, values=count, statistic='sum', bins=bins )
-    stat_all, _, _ = binned_statistic( x=z, values=np.ones(count.shape), statistic='sum', bins=bins )
+    stat_tcc, _, _ = binned_statistic( x=z-z_mid, values=count, statistic='sum', bins=bins )
+    stat_all, _, _ = binned_statistic( x=z-z_mid, values=np.ones(count.shape), statistic='sum', bins=bins )
     stat_all[stat_all == 0] = np.nan
     ax[i].set_title(tcc_names[key])
     ax[i].plot(
@@ -163,11 +163,11 @@ for i, key in enumerate(['sp3c', '6A', 'sp5c', '8B', '8A', '9B', '10B', 'FCC', '
 plt.gcf().set_size_inches(12, 10)
 plt.tight_layout()
 plt.savefig('tcc_result_1.pdf')
-
+plt.close()
 
 # second analysis
 
-bins = np.linspace(-z_mid, z_mid, 200)
+bins = np.linspace(-z_mid, z_mid, nbins)
 bc = (bins[1:] + bins[:-1]) / 2
 
 fig, ax = plt.subplots(1, 1)
@@ -196,15 +196,16 @@ for i, key in enumerate(clusters_to_plot):
 ax.set_ylabel('Population')
 ax.set_xlabel('Z / $\sigma$')
 ax.set_xlim(-z_mid, z_mid)
-plt.legend(handlelength=1.0, ncol=2)
+plt.legend(handlelength=1.0, ncol=2, loc='lower center')
 
 plt.gcf().set_size_inches(8, 5)
 plt.tight_layout()
 plt.savefig('tcc_result_2.pdf')
+plt.close()
 
 # third analysis
 
-bins = np.linspace(-z_mid, z_mid, 200)
+bins = np.linspace(-z_mid, z_mid, nbins)
 bc = (bins[1:] + bins[:-1]) / 2
 
 fig, ax = plt.subplots(1, 1)
@@ -225,9 +226,10 @@ for i, key in enumerate(clusters_to_plot):
 ax.set_ylabel('|Deviation from Bulk|')
 ax.set_xlabel('Z / $\sigma$')
 ax.set_xlim(-z_mid, z_mid)
-plt.legend(handlelength=1.0, ncol=2)
+plt.legend(handlelength=1.0, ncol=2, loc='lower center')
 
 plt.gcf().set_size_inches(8, 5)
 plt.yscale('log')
 plt.tight_layout()
 plt.savefig('tcc_result_3.pdf')
+plt.close()

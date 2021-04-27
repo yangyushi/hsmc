@@ -40,7 +40,7 @@ if kind == 'hardwall':
     ax = fig.add_subplot(projection='3d')
     ax.scatter(*configuration.T)
     plt.tight_layout()
-    plt.savefig("system_start.pdf")
+    plt.savefig("system_start.png")
 
 elif kind in valid_planes:
     crystal_kind = hsmc.crystal.parse_plane_kind(kind)
@@ -79,7 +79,7 @@ elif kind in valid_planes:
     ax.scatter(*walls.T)
     ax.scatter(*gas.T)
     plt.tight_layout()
-    plt.savefig("system_start.pdf")
+    plt.savefig("system_start.png")
 else:
     exit("invalid boundary kind: " + kind)
 
@@ -109,7 +109,7 @@ ax2.hist(pos[2], bins=250)
 ax2.set_xlabel("Z / $\sigma$")
 ax2.set_ylabel("PDF")
 plt.tight_layout()
-plt.savefig("system_crushed.pdf")
+plt.savefig("system_crushed.png")
 
 
 for _ in range(sweep_equilibrium):
