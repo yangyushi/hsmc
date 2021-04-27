@@ -1,0 +1,15 @@
+.*
+build*
+project
+reference
+
+lib/**/*.so
+lib/**/*.a
+**/tags
+*.o
+.DS_store
+*.swp
+*.xyz
+
+**/__pycache__
+**.pyc
