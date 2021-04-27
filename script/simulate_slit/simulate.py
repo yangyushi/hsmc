@@ -4,6 +4,7 @@ import json
 import numpy as np
 import configparser
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D  # compatible with old matplotlib
 
 import hsmc
 
