@@ -73,7 +73,7 @@ for i, key in enumerate(cluster_names):
             (bins[0], bins[-1]), (tcc_bulk[key], tcc_bulk[key]), color='k',
             lw=1, ls='--', zorder=1
         )
-    color = mpl.cm.tab10(i / len(cluster_names))
+    color = mpl.cm.tab10(np.random.random())
     ax.plot(
         bin_centres, tcc_dist[key], zorder=2, color=color,
         label=tcc_names[key]
@@ -93,7 +93,7 @@ markers = ['^', 's', 'p', 'h', 'o']
 
 fig, ax = plt.subplots(1, 1)
 for i, key in enumerate(cluster_names):
-    color = mpl.cm.rainbow(i / len(cluster_names))
+    color = mpl.cm.rainbow(np.random.random())
     pop = tcc_dist[key]
     val = np.abs(pop - tcc_bulk[key])
     ax.scatter(
