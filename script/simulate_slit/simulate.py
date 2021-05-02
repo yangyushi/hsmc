@@ -56,22 +56,24 @@ elif kind in valid_planes:
         kind, nx, ny, vf=vf_crystal, sigma=sigma
     )
 
-    v_sph = np.pi * N * sigma ** 3 / 6
-    a_xy = box_xy[0] * box_xy[1]  # area of box in xy plane
-    box_z = v_sph / a_xy / vf_init
-
     # (x, y) --> (x, y, 0)
     plane = np.concatenate((plane, np.zeros((len(plane), 1))), axis=1)
+
+    # zoom z to desired volumn fraction
+    v_sph = np.pi * (N + len(plane) * 2) * sigma ** 3 / 6
+    a_xy = box_xy[0] * box_xy[1]  # area of box in xy plane
+    box_z = v_sph / a_xy / vf_init
 
     # concatenate top and bottom planes
     walls = np.concatenate((plane, plane + np.array((0, 0, box_z))), axis=0)
 
     box = np.array((box_xy[0], box_xy[1], box_z))
 
-    gas = np.random.uniform(0, 1, size=(N - len(walls), 3)) # ~U(0, 1)
+    gas = np.random.uniform(0, 1, size=(N, 3)) # ~U(0, 1)
     gas *= box - np.array((0, 0, sigma * 2))  # ~U(0, box - 2 sigma)
     gas = gas + np.array((0, 0, sigma))  # ~U(sigma, box - sigma)
 
+    N += len(walls)
     configuration = np.concatenate((walls, gas))
     indices_to_move = np.arange(len(walls), N)
 
