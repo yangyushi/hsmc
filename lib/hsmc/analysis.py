@@ -1,6 +1,10 @@
 import re
+import os
+from glob import glob
+import subprocess
 import numpy as np
 import pandas as pd
+import configparser
 import matplotlib.pyplot as plt
 
 
@@ -11,7 +15,7 @@ INT_TYPES = (
 
 class XYZ:
     """
-    Very fast XYZ parser that can handle very large xyz file
+    Fast XYZ parser that can handle very large xyz file
 
     Attributes:
         particle_numbers (list): the number of particles in each frame
@@ -95,6 +99,8 @@ class XYZ:
             return result
 
     def set_load_parameters(self, **kwargs):
+        if 'delimiter' not in kwargs:  # use space as default delimiter
+            kwargs.update({'delimiter': ' '})
         if self.__engine == 'numpy':
             self.__func = np.loadtxt
             self.__kwargs = {
@@ -120,6 +126,166 @@ class XYZ:
         self.__f.close()
 
 
+class TCC:
+    """
+    A light-weight python wrapper for Topological Cluster Classification, especially designed
+        to handle very large xyz files. (>10GB)
+    """
+    def __init__(self, work_dir):
+        self.__cwd = work_dir
+        self.__raw = os.path.join(self.__cwd, 'raw_output')
+        self.clusters = {}
+
+    def __write_box(self, box):
+        """
+        Generate a legal box.txt file in the tcc working directory
+        """
+        if box.ndim == 1:
+            box = box[np.newaxis, :]  # (3,) --> (1, 3)
+        if box.shape[1] != 3:
+            raise RuntimeError("The dimension of box should be 3")
+        box = np.concatenate((
+            np.arange(box.shape[0])[:, np.newaxis],  # shape (n, 1)
+            box  # shape (n, 3)
+        ), axis=1)  # shape (n, 4)
+        np.savetxt(
+            fname=os.path.join(self.__cwd, 'box.txt'),
+            X=box,
+            header='#iter Lx Ly Lz', fmt=["%d"] + ["%.8f"] * 3
+        )
+
+    def __write_parameters(self, **kwargs):
+        """
+        Write inputparameters.ini and clusters_to_analyse.ini
+
+        A symlink named `sample.xyz` should be inside self__cwd, linking
+            to the xyz file to be analysed
+        """
+        input_parameters = {
+            "Box": { "box_type": 1, "box_name": "box.txt" },
+            "Run": { "xyzfilename": "sample.xyz", "frames": 1},
+            "Simulation": {
+                "rcutAA": 1.8, "rcutAB": 1.8, "rcutBB": 1.8, "min_cutAA": 0.0,
+                "bond_type": 1, "PBCs": 1, "voronoi_parameter": 0.82,
+                "num_bonds": 50, "cell_list": 1, "analyse_all_clusters": 1,
+            },
+            "Output": {
+                "bonds": 0, "clusts": 0, "raw": 1, "do_XYZ": 0,
+                "11a": 0, "13a": 0, "pop_per_frame": 1,
+            }
+        }
+        clusters = { "Clusters": {
+            "sp3a": 0, "sp3b": 0, "sp3c": 0, "sp4a": 0, "sp4b": 0, "sp4c": 0,
+            "sp5a": 0, "sp5b": 0, "sp5c": 0, "6A": 0, "6Z": 0, "7K": 0,
+            "7T_a": 0, "7T_s": 0, "8A": 0, "8B": 0, "8K": 0, "9A": 0, "9B": 0,
+            "9K": 0, "10A": 0, "10B": 0, "10K": 0, "10W": 0, "11A": 1,
+            "11B": 0, "11C": 0, "11E": 0, "11F": 0, "11W": 0, "12A": 0,
+            "12B": 0, "12D": 0, "12E": 0, "12K": 0, "13A": 0, "13B": 0,
+            "13K": 0, "FCC": 0, "HCP": 0, "BCC_9": 0, "BCC_15": 0,
+            }
+        }
+        for key in kwargs:
+            for section in input_parameters:
+                if key in input_parameters[section].keys():
+                    input_parameters[section][key] = kwargs[key]
+            if key in clusters["Clusters"].keys():
+                clusters["Clusters"][key] = kwargs[key]
+
+        config_input = configparser.ConfigParser()
+        config_input.read_dict(input_parameters)
+        config_cluster = configparser.ConfigParser()
+        config_cluster.read_dict(clusters)
+
+        with open(
+            os.path.join(self.__cwd, "inputparameters.ini"), 'w'
+        ) as f:
+            config_input.write(f)
+        with open(
+            os.path.join(self.__cwd, "clusters_to_analyse.ini"), 'w'
+        ) as f:
+            config_cluster.write(f)
+
+    def run(self, xyz, box, frames=None, tcc_exec="tcc", silent=True, **kwargs):
+        """
+        Call tcc to analyse an XYZ file.
+        """
+        if self.__cwd not in os.listdir(os.getcwd()):
+            os.mkdir(os.path.join(os.getcwd(), self.__cwd))
+        if isinstance(frames, type(None)):
+            frames = len(XYZ(xyz))
+        self.__write_box(np.array(box))
+        # create a soft link of the xyz file to self.__cwd
+        soft_link = os.path.join(self.__cwd, "sample.xyz")
+        if os.path.isfile(soft_link):
+            os.remove(soft_link)
+        os.symlink(src=xyz, dst=soft_link)
+        self.__write_parameters(frames=frames, **kwargs)
+        if silent:
+            subprocess.run(
+                args=tcc_exec,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                cwd=self.__cwd
+            )
+        else:
+            subprocess.run(args=tcc_exec, cwd=self.__cwd)
+
+    def parse(self):
+        if not os.path.isdir(self.__raw):
+            raise FileNotFoundError(
+                "No raw_output folder, rerun the tcc with Output.raw = 1"
+            )
+        cluster_name_pattern = re.compile(r'sample\.xyz.*raw_(.+)')
+        filenames = glob(
+            "{folder}/sample.xyz*raw_*".format(folder=self.__raw)
+        )
+        filenames = [os.path.basename(fn) for fn in filenames]
+        filenames.sort()
+        cluster_names = [cluster_name_pattern.match(fn).group(1) for fn in filenames]
+        for cn in cluster_names:
+            fn = glob(
+                "{folder}/sample.xyz*raw_{cluster_name}".format(
+                    folder=self.__raw, cluster_name=cn
+                )
+            )
+            if len(fn) == 0:
+                raise FileNotFoundError(
+                    "Raw output file for {c} not found".format(c=cn)
+                )
+            if len(fn) > 1:
+                raise RuntimeError("Multiple raw file found for {c}".format(c=cn))
+            else:
+                fn = fn[0]
+            self.clusters.update({
+                cn: XYZ(fn, dtype=bool, true_values='C', false_values='A')
+            })
+
+    def frame(self, f):
+        """
+        Getting the result of particles and the clusters they are in. The
+            output is a numpy array of Boolean values. One example would be
+
+        ..code-block::
+
+            id, FCC, 13A, 12E, 11F, 10B
+            1,    0,   0,   0,   0,   1   # particle 1 is in 10B
+            2,    1,   0,   0,   0,   0   # particle 2 is in FCC
+            3,    0,   0,   0,   0,   0   # particle 3 is not in any cluster
+            ...
+
+        Args:
+            f (int): the frame number
+        """
+        result_dict = {cn: xyz[f].ravel() for cn, xyz in self.clusters.items()}
+        return pd.DataFrame.from_dict(data=result_dict, orient='columns')
+
+    def __len__(self):
+        if self.clusters:  # not an empty cluster
+            for key in self.clusters:
+                return len(self.clusters[key])
+        else:
+            return 0
+
 def get_slice_vf(positions, s_min, s_max, box, axis=2, sigma=1.0):
     """
     Calculate the volumn fraction in range (s_min, s_max).
@@ -129,17 +295,17 @@ def get_slice_vf(positions, s_min, s_max, box, axis=2, sigma=1.0):
 
     ..code-block::
 
-            │   case 1  │
-            │   ,───.   │
-     case 2 │  (  +  )  │ case 3
-         ,──┼.  `───'  ,┼──.
-        (  +│ )       ( │+  )
-         `──┼'         `┼──'
-           ,┼──.     ,──┼.
-   case 4 ( │+  )   (  +│ ) case 5
-           `┼──'     `──┼'
-            │           │
-          s_min       s_max
+                │   case 1  │
+                │   ,───.   │
+         case 2 │  (  +  )  │ case 3
+             ,──┼.  `───'  ,┼──.
+            (  +│ )       ( │+  )
+             `──┼'         `┼──'
+               ,┼──.     ,──┼.
+       case 4 ( │+  )   (  +│ ) case 5
+               `┼──'     `──┼'
+                │           │
+              s_min       s_max
 
 
     Args:
@@ -180,7 +346,6 @@ def get_slice_vf(positions, s_min, s_max, box, axis=2, sigma=1.0):
     )
     volumn_sphere = volumn_sphere_full + volumn_sphere_major + volumn_sphere_minor
     return volumn_sphere / volumn_box
-
 
 
 def get_bulk_vf(frames, box, jump, npoints=50, plot=True, save="state-point.pdf"):
@@ -225,7 +390,10 @@ def get_bulk_vf(frames, box, jump, npoints=50, plot=True, save="state-point.pdf"
             color='k', marker='o'
         )
 
-        plt.plot((z_range[0], z_range[-1] * 2), [vf] * 2, color='k', ls='--', label=f"Bulk {vf:.4f}")
+        plt.plot(
+            (z_range[0], z_range[-1] * 2), [vf] * 2,
+            color='k', ls='--', label="Bulk {vf:.4f}".format(vf=vf)
+        )
         plt.gcf().set_size_inches(8, 4)
         plt.xlabel("Central Region Thickness")
         plt.ylabel("Bulk Volumn Fraction")
