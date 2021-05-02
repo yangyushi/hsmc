@@ -2,9 +2,7 @@
 # request resources:
 #PBS -N slit-simulate
 #PBS -l nodes=1:ppn=1
-#PBS -l walltime=72:00:00
-#PBS -l mem=16gb
-#PBS -q himem
+#PBS -l walltime=240:00:00
 
 capture_err() {
     exit_code=$1
