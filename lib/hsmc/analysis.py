@@ -128,13 +128,20 @@ class XYZ:
 
 class TCC:
     """
-    A light-weight python wrapper for Topological Cluster Classification, especially designed
-        to handle very large xyz files. (>10GB)
+    A light-weight python wrapper for Topological Cluster Classification.
+    It is especially designed to handle very large xyz files.
     """
     def __init__(self, work_dir):
         self.__cwd = work_dir
         self.__raw = os.path.join(self.__cwd, 'raw_output')
         self.clusters = {}
+
+    def __len__(self):
+        if self.clusters:  # not an empty cluster
+            for key in self.clusters:
+                return len(self.clusters[key])
+        else:
+            return 0
 
     def __write_box(self, box):
         """
@@ -207,13 +214,32 @@ class TCC:
 
     def run(self, xyz, box, frames=None, tcc_exec="tcc", silent=True, **kwargs):
         """
-        Call tcc to analyse an XYZ file.
+        Call tcc to analyse an XYZ file. The output will be write to `self.__cwd`
+
+        Args:
+            xyz (str): the path to the xyz file to be analysed. Notice that
+                the working directory is `self.__cwd` if using a relative path.
+            box (list): the box of the simulation / experiment. The warpper
+                supports different boxes in different frames.
+            frames (int): the number of frames to perform TCC analysis. This
+                wrapper DOES NOT check if this value is valid.
+            tcc_exec (str): the path to TCC binary executable.
+            silent (bool): if True the output of TCC will be supressed
+            kwargs (dict): tcc parameters. These parameters will overwrite
+                the default parameters.
+
+        Return:
+            None
         """
         if self.__cwd not in os.listdir(os.getcwd()):
             os.mkdir(os.path.join(os.getcwd(), self.__cwd))
         if isinstance(frames, type(None)):
+            tmp = os.getcwd()
+            os.chdir(self.__cwd)
             frames = len(XYZ(xyz))
+            os.chdir(tmp)
         self.__write_box(np.array(box))
+
         # create a soft link of the xyz file to self.__cwd
         soft_link = os.path.join(self.__cwd, "sample.xyz")
         if os.path.isfile(soft_link):
@@ -279,12 +305,29 @@ class TCC:
         result_dict = {cn: xyz[f].ravel() for cn, xyz in self.clusters.items()}
         return pd.DataFrame.from_dict(data=result_dict, orient='columns')
 
-    def __len__(self):
-        if self.clusters:  # not an empty cluster
-            for key in self.clusters:
-                return len(self.clusters[key])
+    @property
+    def population(self):
+        """
+        Return the mean population if each frame as a pandas table
+
+        Return:
+            pandas.DataFrame: a pandas table where each columns are the clusters
+                and each rows are different frames
+        """
+        pattern = 'sample.xyz.*.pop_per_frame'
+        fn = glob(os.path.join(self.__cwd, pattern))
+        if len(fn) == 1:
+            fn = fn[0]
+        elif len(fn) == 0:
+            raise FileNotFoundError(
+                "Population output file ({p}) not found".format(p=pattern)
+            )
         else:
-            return 0
+            raise RuntimeError("Multiple population output files exist")
+        df = pd.read_csv(fn, sep='\t', header=0, index_col=0)
+        df.dropna(axis='columns', inplace=True)
+        return df.T
+
 
 def get_slice_vf(positions, s_min, s_max, box, axis=2, sigma=1.0):
     """
