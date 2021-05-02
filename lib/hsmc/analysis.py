@@ -407,30 +407,30 @@ def get_bulk_vf(frames, box, jump, npoints=50, plot=True, save="state-point.pdf"
     Return:
         float: the volumn fraction corresponding to the central region
     """
-    z = []
+    z_mid = 0
     for i, frame in enumerate(frames):
-        z.append(frame[:, -1])
-    z = np.concatenate(z)
-    z_mid = z.mean()
+        z_mid += frame[:, -1].mean()
+    z_mid /= len(frames)
     z_range = np.linspace(1, z_mid / 2, npoints)
     n_frames = int(np.ceil(len(frames) / jump))
-    bulk_vf_ensemble = np.empty((n_frames, npoints))
-    for f, frame in enumerate(frames[::jump]):
-        bulk_vf = np.empty(npoints)
-        for i, dz in enumerate(z_range):
-            bulk_vf[i] = get_slice_vf(
-                frame, z_mid - dz, z_mid + dz, box
-            )
-        bulk_vf_ensemble[f] = bulk_vf
+    bulk_vf = np.zeros(npoints)
+    count = 0
+    for f, frame in enumerate(frames):
+        if f % jump == 0:
+            for i, dz in enumerate(z_range):
+                bulk_vf[i] += get_slice_vf(
+                    frame, z_mid - dz, z_mid + dz, box
+                )
+            count += 1
 
+    bulk_vf /= count
     weight = np.exp(-z_range)
-    weight = weight / weight.sum() * bulk_vf_ensemble.shape[1]
-    vf = (bulk_vf_ensemble.mean(axis=0) * weight).mean()
+    weight = weight / weight.sum() * npoints
+    vf = (bulk_vf * weight).mean()
     if plot:
-        plt.errorbar(
-            x = z_range * 2, y=np.mean(bulk_vf_ensemble, axis=0),
-            yerr=np.std(bulk_vf_ensemble, axis=0) / np.sqrt(bulk_vf_ensemble.shape[0]),
-            color='k', marker='o'
+        plt.scatter(
+            x = z_range * 2, y=bulk_vf,
+            color='w', marker='o', ec='k'
         )
 
         plt.plot(
@@ -446,4 +446,5 @@ def get_bulk_vf(frames, box, jump, npoints=50, plot=True, save="state-point.pdf"
             plt.savefig(save)
         else:
             plt.show()
+        plt.close()
     return vf
