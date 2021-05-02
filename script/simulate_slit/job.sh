@@ -6,6 +6,13 @@
 #PBS -l mem=16gb
 #PBS -q himem
 
+capture_err() {
+    exit_code=$1
+    if [[ $exit_code -ne 0 ]]; then
+        exit 1
+    fi
+}
+
 if [ $PBS_O_WORKDIR ]; then
     cd $PBS_O_WORKDIR
 fi
@@ -19,7 +26,9 @@ if [[ ! -d tcc ]]; then
 fi
 
 ./clean
-python3 simulate.py
+python3 simulate.py; capture_err $?
 mv *.png result
-python3 analyse.py
+python3 analyse.py; capture_err $?
+python3 plot.py; capture_err $?
 mv *.pdf result
+rm -rf tcc_bulk
