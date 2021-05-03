@@ -40,6 +40,7 @@ fig, ax = plt.subplots(3, 3)
 fig.suptitle(f"Slit Geometry with {kind}")
 ax = ax.ravel()
 for i, key in enumerate(cluster_names):
+    ax[i].set_title(tcc_names[key])
     ax[i].plot(
         bin_centres, tcc_dist[key], color='teal', zorder=2,
         label="Slit with (100) Facet"
