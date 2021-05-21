@@ -1,6 +1,7 @@
 rm -rf *.pdf
 rm -rf *.xyz
 rm -rf *.pkl
-rm -rf result/*
-rm -rf tcc/*
+rm -rf result
+rm -rf tcc
+rm -rf figure
 rm -rf tags

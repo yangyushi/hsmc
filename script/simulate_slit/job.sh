@@ -19,14 +19,16 @@ if [[ ! -d result ]]; then
     mkdir result
 fi
 
+if [[ ! -d figure ]]; then
+    mkdir figure
+fi
+
 if [[ ! -d tcc ]]; then
     mkdir tcc
 fi
 
-./clean
 python3 simulate.py; capture_err $?
-mv *.png result
-python3 analyse.py; capture_err $?
+python3 bulk.py; capture_err $?
+python3 tcc.py; capture_err $?
 python3 plot.py; capture_err $?
-mv *.pdf result
 rm -rf tcc_bulk

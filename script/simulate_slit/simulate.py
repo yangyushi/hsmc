@@ -27,6 +27,9 @@ sweep_total = int(float(conf['Run']['total']))
 dump_frequency = int(float(conf['Run']['dump_frequency']))
 dump_name = os.path.join('result', conf['Run']['filename'])
 
+if os.path.isfile(dump_name):
+    exit(0)
+
 v_sph = np.pi * N * sigma ** 3 / 6
 l_xy = np.sqrt(v_sph / vf_final / z_final)  # approx value
 
@@ -41,7 +44,7 @@ if kind == 'hardwall':
     ax = fig.add_subplot(projection='3d')
     ax.scatter(*configuration.T)
     plt.tight_layout()
-    plt.savefig("system_start.png")
+    plt.savefig(os.path.join("figure", "system_start.png"))
 
 elif kind in valid_planes:
     crystal_kind = hsmc.crystal.parse_plane_kind(kind)
@@ -82,7 +85,7 @@ elif kind in valid_planes:
     ax.scatter(*walls.T)
     ax.scatter(*gas.T)
     plt.tight_layout()
-    plt.savefig("system_start.png")
+    plt.savefig(os.path.join("figure", "system_start.png"))
 else:
     exit("invalid boundary kind: " + kind)
 
@@ -112,8 +115,10 @@ ax2.hist(pos[2], bins=250)
 ax2.set_xlabel("Z / $\sigma$")
 ax2.set_ylabel("PDF")
 plt.tight_layout()
-plt.savefig("system_crushed.png")
+plt.savefig(os.path.join("figure", "system_crushed.png"))
 
+with open(os.path.join("result", "box.json"), 'w') as f:
+    json.dump(system.get_box(), f)
 
 for _ in range(sweep_equilibrium):
     system.sweep()
@@ -136,6 +141,3 @@ for frame in range(sweep_total):
         )
 
 f_xyz.close()
-
-with open(os.path.join("result", "box.json"), 'w') as f:
-    json.dump(system.get_box(), f)
