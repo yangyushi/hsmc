@@ -267,7 +267,9 @@ class TCC:
         )
         filenames = [os.path.basename(fn) for fn in filenames]
         filenames.sort()
-        cluster_names = [cluster_name_pattern.match(fn).group(1) for fn in filenames]
+        cluster_names = [
+            cluster_name_pattern.match(fn).group(1) for fn in filenames
+        ]
         for cn in cluster_names:
             fn = glob(
                 "{folder}/sample.xyz*raw_{cluster_name}".format(
@@ -279,7 +281,9 @@ class TCC:
                     "Raw output file for {c} not found".format(c=cn)
                 )
             if len(fn) > 1:
-                raise RuntimeError("Multiple raw file found for {c}".format(c=cn))
+                raise RuntimeError(
+                    "Multiple raw file found for {c}".format(c=cn)
+                )
             else:
                 fn = fn[0]
             self.clusters.update({
@@ -448,3 +452,4 @@ def get_bulk_vf(frames, box, jump, npoints=50, plot=True, save="state-point.pdf"
             plt.show()
         plt.close()
     return vf
+
