@@ -60,4 +60,9 @@ positions = system.get_positions()
 
 ## Other utilities in Python Module
 
-The `hsmc` module in the lib folder contains other handy tools. For instance a very fast `XYZ` file parser, and some crystallography related functions.
+The `hsmc` module in the lib folder contains other handy tools. For instance,
+
+- a very fast `XYZ` file parser,
+- a `TCC` wrapper designed for tackle very long trajectories,
+
+and some crystallography related functions.
