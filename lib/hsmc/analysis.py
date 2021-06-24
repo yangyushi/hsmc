@@ -134,6 +134,7 @@ class TCC:
     def __init__(self, work_dir):
         self.__cwd = work_dir
         self.__raw = os.path.join(self.__cwd, 'raw_output')
+        self.clusters_to_analyse = []
         self.clusters = {}
 
     def __len__(self):
@@ -181,22 +182,26 @@ class TCC:
                 "11a": 0, "13a": 0, "pop_per_frame": 1,
             }
         }
+
         clusters = { "Clusters": {
             "sp3a": 0, "sp3b": 0, "sp3c": 0, "sp4a": 0, "sp4b": 0, "sp4c": 0,
             "sp5a": 0, "sp5b": 0, "sp5c": 0, "6A": 0, "6Z": 0, "7K": 0,
             "7T_a": 0, "7T_s": 0, "8A": 0, "8B": 0, "8K": 0, "9A": 0, "9B": 0,
-            "9K": 0, "10A": 0, "10B": 0, "10K": 0, "10W": 0, "11A": 1,
+            "9K": 0, "10A": 0, "10B": 0, "10K": 0, "10W": 0, "11A": 0,
             "11B": 0, "11C": 0, "11E": 0, "11F": 0, "11W": 0, "12A": 0,
             "12B": 0, "12D": 0, "12E": 0, "12K": 0, "13A": 0, "13B": 0,
             "13K": 0, "FCC": 0, "HCP": 0, "BCC_9": 0, "BCC_15": 0,
             }
         }
+
         for key in kwargs:
             for section in input_parameters:
                 if key in input_parameters[section].keys():
                     input_parameters[section][key] = kwargs[key]
-            if key in clusters["Clusters"].keys():
-                clusters["Clusters"][key] = kwargs[key]
+
+        for key in clusters["Clusters"]:
+            if key in self.clusters_to_analyse:
+                clusters["Clusters"][key] = 1
 
         config_input = configparser.ConfigParser()
         config_input.read_dict(input_parameters)
