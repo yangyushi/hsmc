@@ -19,6 +19,7 @@ N = int(conf['System']['n'])
 sigma = 1
 vf_init = float(conf['System']['vf_init'])
 vf_final = float(conf['System']['vf_final'])
+r_skin = float(conf['System']['r_skin'])
 vf_crystal = float(conf['Boundary']['vf_crystal'])
 z_final = float(conf['Boundary']['z'])
 kind = conf['Boundary']['kind']
@@ -91,7 +92,7 @@ else:
 
 is_pbc = [True, True, False]
 is_hard = [False, False, True]
-system = hsmc.chard_sphere.HSMC(N, box, is_pbc, is_hard)
+system = hsmc.chard_sphere.HSMC(N, box, is_pbc, is_hard, r_skin)
 
 system.load_positions(configuration.T)
 system.set_indices(indices_to_move)

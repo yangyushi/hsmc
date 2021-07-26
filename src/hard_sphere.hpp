@@ -166,7 +166,10 @@ void load(T& system, string filename);
  */
 class HSMC{
     public:
-        HSMC(int n, vector<double> box, vector<bool> is_pbc, vector<bool> is_hard);
+        HSMC(
+            int n, vector<double> box,
+            vector<bool> is_pbc, vector<bool> is_hard, double r_skin
+        );
         int dim_ = 3;
         int n_;
         vector<double> box_;
@@ -221,7 +224,7 @@ class HSMC{
         vector<bool> is_hard_;
         vector<int> hard_dim_; // dimensions with hard walls
         vector<int> rand_indices_;
-        VerletList<Coord3D> vlist_{1.0, 3.0};
+        VerletList<Coord3D> vlist_;
         int ldi_ = 0;  // largest displacement index
         vector<array<int, 2>> get_overlap_indices();
         vector<int> get_neighbours(int i){

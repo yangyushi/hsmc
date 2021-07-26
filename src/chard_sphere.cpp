@@ -7,7 +7,11 @@ namespace py = pybind11;
 
 PYBIND11_MODULE(chard_sphere, m){
     py::class_<HSMC>(m, "HSMC")
-        .def(py::init<int, vector<double>, vector<bool>, vector<bool>>())
+        .def(
+            py::init<
+                int, vector<double>, vector<bool>, vector<bool>, double
+            >()
+        )
         .def("fill_idea_gas", &HSMC::fill_ideal_gas)
         .def("fill_hs", &HSMC::fill_hs)
         .def("crush", &HSMC::crush)

@@ -20,10 +20,13 @@ vector<int> unravel_index(int index, const vector<int>& shape) {
 /*
  * Initialise the system by randomly populating the system
  */
-HSMC::HSMC(int n, vector<double> box, vector<bool> is_pbc, vector<bool> is_hard)
-    : n_{n}, box_{box}, positions_{dim_, n},
+HSMC::HSMC(
+        int n, vector<double> box,
+        vector<bool> is_pbc, vector<bool> is_hard,
+        double r_skin = 3.0
+    ) : n_{n}, box_{box}, positions_{dim_, n},
     boundary_{box, is_pbc}, total_disp_{dim_, n},
-    is_pbc_{is_pbc}, is_hard_{is_hard} {
+    is_pbc_{is_pbc}, is_hard_{is_hard}, vlist_{1.0, r_skin} {
     step_ = 1;
     for (int i = 0; i < n_; i++){
         rand_indices_.push_back(i);

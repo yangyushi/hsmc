@@ -17,6 +17,7 @@ conf = configparser.ConfigParser()
 conf.read('configure.ini')
 n_particle = int(conf['System']['n'])
 vf_init = float(conf['System']['vf_init'])
+r_skin = float(conf['System']['r_skin'])
 sweep_equilibrium = int(float(conf['Run']['equilibrium']))
 sweep_total_bulk = int(float(conf['Run']['total_bulk']))
 dump_frequency_bulk = int(float(conf['Run']['dump_frequency_bulk']))
@@ -77,7 +78,7 @@ if not os.path.isfile(os.path.join('result', 'sample_bulk.xyz')):
 
     is_pbc = [True, True, True]
     is_hard = [False, False, False]
-    system = hsmc.chard_sphere.HSMC(n_particle, box, is_pbc, is_hard)
+    system = hsmc.chard_sphere.HSMC(n_particle, box, is_pbc, is_hard, r_skin)
     system.fill_hs()
     system.crush(bulk_vf, 0.01)
     dump_name_bulk = os.path.join("result", "sample_bulk.xyz")
