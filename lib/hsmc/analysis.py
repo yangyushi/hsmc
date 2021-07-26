@@ -42,6 +42,7 @@ class XYZ:
             self.__engine = 'numpy'
         self.__parse()
         self.set_load_parameters(**kwargs)
+        self.__ndim = self.__detect_dimension()
 
     def __parse(self):
         self.__frame_cursors = []
@@ -58,6 +59,22 @@ class XYZ:
                 for _ in range(particle_num):
                     self.__f.readline()
             line = self.__f.readline()
+
+    def __detect_dimension(self):
+        for i, num in enumerate(self.particle_numbers):
+            if num > 0:
+                self.__f.seek(self.__frame_cursors[i])
+                if self.__engine == 'pandas':
+                    result = self.__func(
+                        self.__f, nrows=self.particle_numbers[i], **self.__kwargs
+                    ).values
+                elif self.__engine == 'numpy':
+                    result = self.__func(
+                        self.__f, max_rows=self.particle_numbers[i], **self.__kwargs
+                    )
+                else:
+                    raise ValueError("Unknown engine name, select from [numpy] or [pandas]")
+                return result.shape[1]
 
     def __len__(self):
         """
@@ -76,7 +93,16 @@ class XYZ:
             raise StopIteration
 
     def __getitem__(self, i):
+        """
+        Args:
+            i (int): the frame number
+
+        Return:
+            np.ndarray: the information of all particles in a frame, shape (n, dim)
+        """
         if type(i) in INT_TYPES:
+            if self.particle_numbers[i] == 0:
+                return np.empty((0, self.__ndim))
             self.__f.seek(self.__frame_cursors[i])
             if self.__engine == 'pandas':
                 result = self.__func(
@@ -88,7 +114,10 @@ class XYZ:
                 )
             else:
                 raise ValueError("Unknown engine name, select from [numpy] or [pandas]")
-            return result
+            if result.ndim == 1:  # for frames with just 1 particle
+                return result[np.newaxis, :]
+            else:
+                return result
         elif type(i) == slice:
             result = []
             start = i.start if i.start else 0
