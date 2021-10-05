@@ -2,6 +2,7 @@ import re
 import os
 from glob import glob
 import subprocess
+from tempfile import TemporaryDirectory
 import numpy as np
 import pandas as pd
 import configparser
@@ -271,7 +272,7 @@ class TCC:
             tmp = os.getcwd()
             os.chdir(self.__cwd)
             frames = len(XYZ(xyz))
-            os.chdir(tmp)
+            os.chdir(tmp)  # TODO: check this line
         self.__write_box(np.array(box))
 
         # create a soft link of the xyz file to self.__cwd
@@ -285,10 +286,11 @@ class TCC:
                 args=tcc_exec,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                cwd=self.__cwd
+                cwd=self.__cwd,
+                check=True,
             )
         else:
-            subprocess.run(args=tcc_exec, cwd=self.__cwd)
+            subprocess.run(args=tcc_exec, cwd=self.__cwd, check=True)
 
     def parse(self):
         if not os.path.isdir(self.__raw):
@@ -365,6 +367,60 @@ class TCC:
         df = pd.read_csv(fn, sep='\t', header=0, index_col=0)
         df.dropna(axis='columns', inplace=True)
         return df.T
+
+
+class TCCOTF(TCC):
+    """
+    A light-weight python wrapper for TCC. The calculation is "on the fly", where
+    """
+    def __init__(self):
+        self.__tmp_dir = TemporaryDirectory()
+        TCC.__init__(self, self.__tmp_dir.name)
+
+
+    def run(self, configurations, box, tcc_exec="tcc", silent=True, **kwargs):
+        """
+        Call tcc to analyse an XYZ file. The coordinates will be write to the hard disk
+            temporarily on a random location, and the temp directory will be removed
+            upon the destruction of the TCCOTF object.
+
+        Args:
+            configurations (numpy.ndarray): the particle coordinaes in\
+                different time points. The shape of the array should be\
+                (n_frame, n_particle, 3)
+            box (iterable): the box of the simulation / experiment. This\
+                warpper supports different boxes in different frames.
+            tcc_exec (str): the path to TCC binary executable.
+            silent (bool): if True the output of TCC will be supressed
+            kwargs (dict): tcc parameters. These parameters will overwrite\
+                the default parameters.
+
+        Return:
+            None
+        """
+        root = os.getcwd()
+        os.chdir(self._TCC__cwd)
+
+        xyz_name = os.path.join(self._TCC__cwd, 'sample.xyz')
+        for i, conf in enumerate(configurations):
+            dump_xyz(xyz_name, conf, comment=i+1)
+
+        self._TCC__write_box(np.array(box))
+        self._TCC__write_parameters(frames=len(configurations), **kwargs)
+
+        if silent:
+            subprocess.run(
+                args=tcc_exec,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                cwd=self._TCC__cwd,
+                check=True,
+            )
+        else:
+            subprocess.run(args=tcc_exec, cwd=self._TCC__cwd, check=True)
+
+        os.chdir(root)
+
 
 
 def get_slice_vf(positions, s_min, s_max, box, axis=2, sigma=1.0):
@@ -487,3 +543,23 @@ def get_bulk_vf(frames, box, jump, npoints=50, plot=True, save="state-point.pdf"
         plt.close()
     return vf
 
+
+def dump_xyz(filename, positions, comment=''):
+    """
+    Dump positions into an xyz file
+
+    Args:
+        filename (str): the name of the xyz file, it can be an existing file
+        positions (numpy.ndarray): the positions of particles, shape (n, dim)
+
+    Return:
+        None
+    """
+    n, dim = positions.shape
+    with open(filename, 'a') as f:
+        np.savetxt(
+            f, positions, delimiter=' ',
+            header='%s\nframe %s' % (n, comment),
+            comments='',
+            fmt=['A %.8e'] + ['%.8e' for i in range(dim - 1)]
+        )
