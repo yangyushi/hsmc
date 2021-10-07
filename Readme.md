@@ -33,19 +33,19 @@ The following snippest present the way to start a simulation
 from hsmc import chard_sphere
 
 
-n_particle = 500
-box = [10, 10, 10]  # box size in X, Y, and Z
+n_particle = 2000
+box = [50, 50, 50]  # box size in X, Y, and Z
 is_pbc = [True, True, False]  # no PBC in the z-direction
 is_hard = [False, False, True]  # hard walls along z-direction
 
 # create the system
-system = chard_sphere.HSMC(n_particle, box, is_pbc, is_hard)
+system = chard_sphere.HSMC(n_particle, box, is_pbc, is_hard, 5)
 
 # randomly fill non-overlapping hard spheres
 system.fill_hs()
 
 # reduce the box size slowly to reach desired volume fraction
-system.crush(0.4, 0.02)
+system.crush(0.5, 0.05)
 
 # print the overview of the system
 print(system)
