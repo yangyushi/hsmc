@@ -551,6 +551,7 @@ def dump_xyz(filename, positions, comment=''):
     Args:
         filename (str): the name of the xyz file, it can be an existing file
         positions (numpy.ndarray): the positions of particles, shape (n, dim)
+        comment (str): the content in the comment line
 
     Return:
         None
@@ -559,7 +560,7 @@ def dump_xyz(filename, positions, comment=''):
     with open(filename, 'a') as f:
         np.savetxt(
             f, positions, delimiter=' ',
-            header='%s\nframe %s' % (n, comment),
+            header='%s\n%s' % (n, comment),
             comments='',
             fmt=['A %.8e'] + ['%.8e' for i in range(dim - 1)]
         )

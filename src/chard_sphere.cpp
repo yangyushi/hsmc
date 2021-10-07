@@ -10,7 +10,12 @@ PYBIND11_MODULE(chard_sphere, m){
         .def(
             py::init<
                 int, vector<double>, vector<bool>, vector<bool>, double
-            >()
+            >(),
+            pybind11::arg("n"),
+            pybind11::arg("box"),
+            pybind11::arg("is_pbc"),
+            pybind11::arg("is_hard"),
+            pybind11::arg("r_skin")=4
         )
         .def("fill_idea_gas", &HSMC::fill_ideal_gas)
         .def("fill_hs", &HSMC::fill_hs)
