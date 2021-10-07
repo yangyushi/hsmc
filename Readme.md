@@ -1,5 +1,9 @@
 # Hard Sphere Monte Carlo Simulation
 
+This is my personal project to study Monte-Carlo simulations of monodispersed hard spheres in 3D.
+
+It is not very fast. If you need large scale simulation, maybe you want to use [hoomd-blue](https://github.com/glotzerlab/hoomd-blue).
+
 
 ## Install
 
