@@ -80,28 +80,4 @@ for i in range(10):
             for L, p, h in zip(system.get_box(), is_pbc, is_hard)
         ]) + "]"
     )
-
-
-
-# [optional] perform TCC analysis. You *only* need a working tcc executable
-tcc = TCCOTF()
-tcc.clusters_to_analyse = ['FCC', 'HCP', '10B']
-
-# make the non-periodic side larger to avoid wrong bounds
-fake_box = [b + 2 * (1 - p) for b, p in zip(system.get_box(), is_pbc)]
-
-# execute the tcc programme
-tcc.run(configurations, box=fake_box, rcutAA=1.8, PBCs=1, tcc_exec='tcc', cell_list=True)
-
-# print the populations of crystals and LFS
-print(tcc.population[["FCC", "HCP", "10B"]])
 ```
-
-## Other utilities in Python Module
-
-The `hsmc` module in the lib folder contains other handy tools. For instance,
-
-- a very fast `XYZ` file parser,
-- a `TCC` wrapper designed for tackle very long trajectories,
-
-and some crystallography related functions.
