@@ -22,7 +22,7 @@ crystal_info = {
     },
     "hcp": {  # assuming close packing 
         "unit_cell": [1, 1, np.sqrt(8/3), 90, 90, 120],
-        "motif": np.array(((0, 0, 0), (1.0/3.0, 1.0/3.0, 0.5))),
+        "motif": np.array(((0, 0, 0), (2.0/3.0, 1.0/3.0, 0.5))),
         "lattice_points": 2,
     },
 }  # the unit is the height of the unit cell
@@ -69,8 +69,8 @@ def __index2pos_3d(indice, unit_cell):
     Translate the lattice basis to Cartesian coordinates
     """
     tm = __get_transformation_matrix_3d(unit_cell)  # transform matrix
-    im = np.asmatrix(indice).T  # index matrix
-    pm = (tm * im).T  # position matrix
+    im = np.array(indice).T  # index matrix
+    pm = (tm @ im).T  # position matrix
     return np.array(pm)
 
 
