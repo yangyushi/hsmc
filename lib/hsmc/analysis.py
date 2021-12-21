@@ -1,4 +1,6 @@
+import re
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 INT_TYPES = (
@@ -483,3 +485,67 @@ class XYZ(FrameIter):
                 )
 
 
+def __isf_3d(x1, x2, pbc_box=[None, None, None], q=np.pi*2):
+    """
+    Calculate the self intermediate scattering function between two configurations.
+
+    Args:
+        x1 (numpy.ndarray): the particle locations, shape (n, 3)
+        x2 (numpy.ndarray): the particle locations, shape (n, 3)
+        pbc_box (iterable): the side length of a periodic boundary, if there\
+            is no PBC in z-direction, then pbc_box should be [Lx, Ly, None].
+        q (float): the wavenumber.
+
+    Return
+        flaot: the value of the self intermediate scattering function
+    """
+    shift = x2 - x1
+    for d in range(3):
+        if not isinstance(pbc_box[d], type(None)):
+            s1d = shift[:, d]
+            mask_1 = s1d > pbc_box[d] / 2.0
+            mask_2 = s1d < - pbc_box[d] / 2.0
+            shift[:, d][mask_1] -= pbc_box[d]
+            shift[:, d][mask_2] += pbc_box[d]
+    shift -= shift.mean(0)[np.newaxis, :]
+    dist = np.linalg.norm(shift, axis=1)
+    f = np.sinc((q / np.pi) * dist)
+    return np.mean(f)
+
+
+def get_isf_3d(trajectory, pbc_box, q=2*np.pi, length=None, sample_num=None):
+    """
+    Calculate the average isf from trajectory
+
+    Args:
+        trajectory (iterable): a collection of positions arranged according\
+            to the time.
+        pbc_box (iterable): the side length of a periodic boundary, if there\
+            is no PBC in z-direction, then pbc_box should be [Lx, Ly, None].
+        q (float): the wavenumber.
+        legnth (int): the largest lag time of the isf.
+        sample_num (int): the maximum number of points sampled per tau value.
+
+    Return:
+        numpy.ndarray: the isf as a function of lag time.
+    """
+    length_full = len(trajectory)
+
+    if isinstance(length, type(None)):
+        length = length_full
+
+    if isinstance(sample_num, type(None)):
+        sample_num = length
+
+    isf = np.zeros(length)
+    count = np.zeros(length)
+    for i in range(length_full):
+        for j in range(i+1, length_full):
+            tau = j - i
+            if (count[tau] == sample_num) or (tau > length):
+                continue
+            isf[tau] += __isf_3d(trajectory[i], trajectory[j], pbc_box, q)
+            count[tau] += 1
+    count[0] = 1
+    isf[0] = 1
+    return isf / count
