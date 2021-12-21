@@ -56,7 +56,7 @@ for i, key in enumerate(cluster_names):
 
 plt.gcf().set_size_inches(12, 10)
 plt.tight_layout()
-plt.savefig('tcc_result_1.pdf')
+plt.savefig('figure/tcc_result_1.pdf')
 plt.close()
 
 # second analysis
@@ -85,7 +85,7 @@ plt.legend(handlelength=1.0, ncol=2, loc='lower center')
 
 plt.gcf().set_size_inches(8, 5)
 plt.tight_layout()
-plt.savefig('tcc_result_2.pdf')
+plt.savefig('figure/tcc_result_2.pdf')
 plt.close()
 
 # third analysis
@@ -109,5 +109,5 @@ plt.legend(handlelength=1.0, ncol=2, loc='upper right')
 plt.gcf().set_size_inches(8, 5)
 plt.yscale('log')
 plt.tight_layout()
-plt.savefig('tcc_result_3.pdf')
+plt.savefig('figure/tcc_result_3.pdf')
 plt.close()

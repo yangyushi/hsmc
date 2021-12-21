@@ -1,4 +1,5 @@
 import os
+import tcc
 import json
 import pickle
 import numpy as np
@@ -66,7 +67,6 @@ if not os.path.isfile(os.path.join('result', 'density-profile.csv')):
     plt.savefig(os.path.join('figure', 'density.pdf'))
     plt.close()
 
-
 if not os.path.isfile(os.path.join('result', 'sample_bulk.xyz')):
     bulk_vf = hsmc.analysis.get_bulk_vf(
         frames, box, jump=1, npoints=50,
@@ -105,20 +105,29 @@ if not os.path.isfile(os.path.join('result', 'sample_bulk.xyz')):
             )
 
     f_xyz.close()
+    with open(os.path.join("result", "box_bulk.json"), 'w') as f:
+        json.dump(system.get_box(), f)
+
 
 if not os.path.isfile(os.path.join('result', 'tcc_bulk.pkl')):
-    tcc_parameters = {'voronoi_parameter':0.82, 'rcutAA': 2.0}
-    fake_box = [l for l in box]
-    fake_box[-1] += tcc_parameters['rcutAA']  # to remove PBC for TCC
+    tcc_parameters = {
+        'voronoi_parameter':0.82, 'rcutAA': 1.8,
+        'PBCs': 1, 'Raw': False, 'clusts': False
+    }
 
-    box_bulk = system.get_box()
+    with open(os.path.join("result", "box_bulk.json"), 'r') as f:
+        box_bulk = json.load(f)
+
     frames_bulk = hsmc.analysis.XYZ(
-        dump_name_bulk, delimiter=' ', usecols=[1, 2, 3], engine='pandas'
+        dump_name_bulk, delimiter=' ', usecols=(1, 2, 3),
+        engine='pandas', align_opt=True
     )
-    tcc_bulk = hsmc.TCC('tcc_bulk')
-    tcc_bulk.run(
-        os.path.join('..', dump_name_bulk),
-        box_bulk, Raw=False, **tcc_parameters
+    tcc_bulk = tcc.OTF()
+
+    tcc_bulk(
+        frames_bulk, box_bulk, 
+        **tcc_parameters
     )
+
     with open(os.path.join('result', 'tcc_bulk.pkl'), 'wb') as f:
         pickle.dump(tcc_bulk.population.mean(axis=0), f)

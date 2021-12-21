@@ -29,6 +29,5 @@ fi
 
 python3 simulate.py; capture_err $?
 python3 bulk.py; capture_err $?
-python3 tcc.py; capture_err $?
+python3 analysis.py; capture_err $?
 python3 plot.py; capture_err $?
-rm -rf tcc_bulk

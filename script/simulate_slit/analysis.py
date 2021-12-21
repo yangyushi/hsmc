@@ -11,6 +11,7 @@ from scipy.stats import binned_statistic
 mpl.rcParams['font.size'] = 18
 
 import hsmc
+import tcc
 
 
 conf = configparser.ConfigParser()
@@ -43,12 +44,13 @@ for i, frame in enumerate(frames):
 z_mid /= len(frames)
 
 print("Running the TCC")
-tcc = hsmc.TCC('tcc')
-tcc.run(
-    os.path.join('..', dump_name),
-    fake_box, Raw=True, **tcc_parameters
+tcc_parser = tcc.Parser('tcc')
+tcc_parser.run(
+    dump_name, fake_box,
+    Raw=True, clusts=True,
+    **tcc_parameters,
 )
-tcc.parse()
+tcc_parser.parse()
 
 print("Calculate the Statistics")
 
@@ -56,11 +58,11 @@ bins = np.linspace(-z_mid, z_mid, nbins)
 bc = (bins[1:] + bins[:-1]) / 2
 
 tcc_spatial_dist = {}
-for cn in tcc.clusters:
+for cn in tcc_parser.cluster_bool:
     stat_tcc = np.zeros(bc.shape)
     stat_all = np.zeros(bc.shape)
-    for f in range(len(tcc)):
-        count = tcc.clusters[cn][f].ravel().astype(int)
+    for f in range(len(tcc_parser)):
+        count = tcc_parser.cluster_bool[cn][f].ravel().astype(int)
         z = frames[f][:, 2]
         stat_tcc += binned_statistic(
             x=z-z_mid, values=count, statistic='sum', bins=bins
