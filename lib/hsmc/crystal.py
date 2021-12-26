@@ -41,6 +41,16 @@ plane_info = {
         "unit_cell": [2**0.5 / 2, 6**0.5 / 2, 90],
         "motif": np.array(((0.0, 0.0), (0.5, 0.5)))
     },
+    "hcp110": {
+        "unit_cell": [
+            np.sqrt(3),
+            np.sqrt(8.0 / 3.0), 90
+        ],
+        "motif": np.array((
+            (0.0, 0.0),
+            (1 / 3.0, 0.5)
+        ))
+    },
 }
 
 
@@ -92,8 +102,8 @@ def __index2pos_2d(indice, unit_cell):
     Translate the lattice basis to Cartesian coordinates
     """
     tm = __get_transformation_matrix_2d(unit_cell)  # transform matrix
-    im = np.asmatrix(indice).T  # index matrix
-    pm = (tm * im).T  # position matrix
+    im = np.array(indice).T  # index matrix
+    pm = (tm @ im).T  # position matrix
     return np.array(pm)
 
 
