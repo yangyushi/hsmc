@@ -2,6 +2,7 @@
 import os
 import json
 import numpy as np
+from tqdm import tqdm
 import configparser
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # compatible with old matplotlib
@@ -12,7 +13,7 @@ import hsmc
 conf = configparser.ConfigParser()
 conf.read('configure.ini')
 
-valid_planes = ('fcc100', 'fcc111', 'fcc110')
+valid_planes = ('fcc100', 'fcc111', 'fcc110', 'hcp110')
 
 # load parameters
 N = int(conf['System']['n'])
@@ -121,7 +122,9 @@ plt.savefig(os.path.join("figure", "system_crushed.png"))
 with open(os.path.join("result", "box.json"), 'w') as f:
     json.dump(system.get_box(), f)
 
-for _ in range(sweep_equilibrium):
+
+print('reaching equilibrium')
+for _ in tqdm(range(sweep_equilibrium)):
     system.sweep()
 
 f_xyz = open(dump_name, 'w')
@@ -129,8 +132,9 @@ f_xyz.close()
 
 f_xyz = open(dump_name, 'a')
 
+print('starting sampling')
 n_move = len(indices_to_move)
-for frame in range(sweep_total):
+for frame in tqdm(range(sweep_total)):
     system.sweep()
     if frame % dump_frequency == 0:
         tmp = system.copy_positions().T[indices_to_move]
