@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 INT_TYPES = (
-    int, np.int, np.int8, np.uint8, np.int16, np.uint16,
+    int, np.int8, np.uint8, np.int16, np.uint16,
     np.int32, np.uint32, np.int64, np.uint64
 )
 
@@ -473,7 +473,7 @@ class XYZ(FrameIter):
             if is_head:
                 cursor = f.tell()
                 fcs.append(cursor)
-                n_particle = int(re.match('(\d+)\n', line).group(0))
+                n_particle = int(re.match('(\\d+)\n', line).group(0))
                 self.numbers.append(n_particle)
                 for _ in range(nc):
                     f.readline()
