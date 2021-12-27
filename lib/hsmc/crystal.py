@@ -202,7 +202,9 @@ def get_lattice_constant(kind, vf, sigma=1.0):
         float: the lattice constant
     """
     n = crystal_info[kind]['lattice_points']
-    a = np.power(n * np.pi * sigma**3 / 6.0 / vf, 1.0 / 3.0)
+    tm = __get_transformation_matrix_3d(crystal_info[kind]['unit_cell'])
+    vol = np.linalg.det(tm)
+    a = np.power(n * np.pi * sigma**3 / 6.0 / vf / vol, 1.0 / 3.0)
     return a
 
 
