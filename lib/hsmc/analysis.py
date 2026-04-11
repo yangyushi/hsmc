@@ -60,7 +60,12 @@ def get_slice_vf(positions, s_min, s_max, box, axis=2, sigma=1.0):
         (np.abs(s_max - z),  np.abs(z - s_min)),
         axis=0
     )
-    volumn_box = box[0] * box[1] * (s_max - s_min)
+
+    volumn_box = s_max - s_min
+    for _dim in range(positions.shape[1]):
+        if _dim != axis:
+            volumn_box *= box[_dim]
+
     volumn_sphere_full = np.pi / 6.0 * np.sum(mask_full) * sigma**3
     volumn_sphere_major = np.sum(
         np.pi * (h + r)**2 / 3.0 * (3 * r - (h + r)) * mask_major
@@ -80,7 +85,7 @@ def get_bulk_vf(
     Find the bulk volume fraction in the central region of a slit
 
     Args:
-        frames (iterable): a collection of different particles positions, each
+        frames (list): a collection of different particles positions, each
             element is a (n, 3) numpy array
         box (iterable): three numbers indicating the x, y, z size of the
             simulation box
@@ -394,7 +399,7 @@ class FrameIter:
                 "Invalid datatype"
             )
         self = cls.__new__(cls)  # bypass __init__
-        self.filename = data['filename']
+        self.__filename = data['filename']
         self.numbers = data['numbers']
         self.__frame = data['frame']
         self.__frame_cursors = data['frame_cursors']
@@ -411,7 +416,7 @@ class FrameIter:
             )
         self.ndim = data['ndim']
         self.__kwargs = data['kwargs']
-        self.__f = open(self.filename)
+        self.__f = open(self.__filename)
         return self
 
 
