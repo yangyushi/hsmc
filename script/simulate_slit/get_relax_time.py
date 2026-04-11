@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
-import os
-import json
 import numpy as np
 import configparser
-import sys
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
 import hsmc
-
 
 
 conf = configparser.ConfigParser()
@@ -68,7 +64,7 @@ elif kind in valid_planes:
 
     box = np.array((box_xy[0], box_xy[1], box_z))
 
-    gas = np.random.uniform(0, 1, size=(N, 3)) # ~U(0, 1)
+    gas = np.random.uniform(0, 1, size=(N, 3))  # ~U(0, 1)
     gas *= box - np.array((0, 0, sigma * 2))  # ~U(0, box - 2 sigma)
     gas = gas + np.array((0, 0, sigma))  # ~U(sigma, box - sigma)
 
@@ -105,10 +101,10 @@ isf = hsmc.analysis.get_isf_3d(
     trajectory, pbc_box=(box[0], box[1], None), length=length
 )
 popt, pcov = curve_fit(
-        f=lambda x, tau, b: np.exp(-(x / tau)**b),
-        xdata = time,
-        ydata = isf,
-        p0 = (10, 1),
+    f=lambda x, tau, b: np.exp(-(x / tau)**b),
+    xdata=time,
+    ydata=isf,
+    p0=(10, 1),
 )
 tau, b = popt
 print(f"Relaxation Time: {tau * jump:.4f} sweeps")
@@ -118,7 +114,7 @@ if plot_isf:
     plt.plot(time, np.exp(-(time / tau)**b), color='teal', label='fit')
     plt.text(time[len(time)//2], 0.7, "$\\tau=$" + f"{tau * jump:.0f} sweeps")
     plt.xlabel(f"Lag Time / {jump} sweeps")
-    plt.ylabel(f"ISF")
+    plt.ylabel("ISF")
     plt.ylim(-0.1, 1.1)
     plt.tight_layout()
     plt.savefig('isf.pdf')

@@ -24,7 +24,7 @@ with open(path_tcc, 'rb') as f:
     bins = data['bin_edges']
     bin_centres = data['bin_centres']
 
-tcc_names = {key:key for key in tcc_dist}
+tcc_names = {key: key for key in tcc_dist}
 tcc_names['sp3c'] = '5A'
 tcc_names['sp5c'] = '7A'
 
@@ -34,7 +34,7 @@ with open(path_bulk, 'rb') as f:
 with open(path_box, "r") as f:
     box = json.load(f)
 
-#first analysis
+# first analysis
 cluster_names = ['sp3c', '6A', 'sp5c', '8B', '8A', '9B', '10B', 'FCC', 'HCP']
 fig, ax = plt.subplots(3, 3)
 fig.suptitle(f"Slit Geometry with {kind}")
@@ -51,7 +51,7 @@ for i, key in enumerate(cluster_names):
         lw=1, ls='--', zorder=1, label='bulk'
     )
     ax[i].set_ylabel('Population')
-    ax[i].set_xlabel('Z / $\sigma$')
+    ax[i].set_xlabel(r'Z / $\sigma$')
     ax[i].set_xlim(bins[0], bins[-1])
 
 plt.gcf().set_size_inches(12, 10)
@@ -80,7 +80,7 @@ for i, key in enumerate(cluster_names):
         label=tcc_names[key]
     )
 ax.set_ylabel('Population')
-ax.set_xlabel('Z / $\sigma$')
+ax.set_xlabel(r'Z / $\sigma$')
 plt.legend(handlelength=1.0, ncol=2, loc='lower center')
 
 plt.gcf().set_size_inches(8, 5)
@@ -103,7 +103,7 @@ for i, key in enumerate(cluster_names):
         label=tcc_names[key]
     )
 ax.set_ylabel('|Deviation from Bulk|')
-ax.set_xlabel('Distance to Wall / $\sigma$')
+ax.set_xlabel(r'Distance to Wall / $\sigma$')
 plt.legend(handlelength=1.0, ncol=2, loc='upper right')
 
 plt.gcf().set_size_inches(8, 5)

@@ -3,15 +3,13 @@ import os
 import json
 import pickle
 import numpy as np
-import pandas as pd
 import configparser
 import matplotlib as mpl
-import matplotlib.pyplot as plt
 from scipy.stats import binned_statistic
 mpl.rcParams['font.size'] = 18
 
-import hsmc
-import tcc
+import hsmc  # noqa: E402
+import tcc  # noqa: E402
 
 
 conf = configparser.ConfigParser()
@@ -25,7 +23,7 @@ frames = hsmc.analysis.XYZ(
 )
 
 nbins = int(conf['Analyse']['nbins'])
-tcc_parameters = {'voronoi_parameter':0.82, 'rcutAA': 2.0}
+tcc_parameters = {'voronoi_parameter': 0.82, 'rcutAA': 2.0}
 
 with open(os.path.join("result", "box.json"), "r") as f:
     box = np.array(json.load(f))
@@ -72,7 +70,7 @@ for cn in tcc_parser.cluster_bool:
         )[0]
     stat_all[stat_all == 0] = np.nan
     tcc_spatial_dist.update({
-        cn : stat_tcc / stat_all
+        cn: stat_tcc / stat_all
     })
 
 with open(os.path.join('result', 'tcc_spatial_dist.pkl'), 'wb') as f:

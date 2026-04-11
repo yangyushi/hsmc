@@ -5,7 +5,6 @@ import numpy as np
 from tqdm import tqdm
 import configparser
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D  # compatible with old matplotlib
 
 import hsmc
 
@@ -74,7 +73,7 @@ elif kind in valid_planes:
 
     box = np.array((box_xy[0], box_xy[1], box_z))
 
-    gas = np.random.uniform(0, 1, size=(N, 3)) # ~U(0, 1)
+    gas = np.random.uniform(0, 1, size=(N, 3))  # ~U(0, 1)
     gas *= box - np.array((0, 0, sigma * 2))  # ~U(0, box - 2 sigma)
     gas = gas + np.array((0, 0, sigma))  # ~U(sigma, box - sigma)
 
@@ -109,12 +108,12 @@ fig = plt.figure(figsize=(10, 4))
 ax = fig.add_subplot(121, projection='3d')
 ax2 = fig.add_subplot(122)
 ax.scatter(*pos, color='w', ec='k', marker='o')
-plt.title(f"{kind}, $\phi$ = {vf_final}")
-ax.set_xlabel("X / $\sigma$")
-ax.set_ylabel("Y / $\sigma$")
-ax.set_zlabel("Z / $\sigma$")
+plt.title(rf"{kind}, $\phi$ = {vf_final}")
+ax.set_xlabel(r"X / $\sigma$")
+ax.set_ylabel(r"Y / $\sigma$")
+ax.set_zlabel(r"Z / $\sigma$")
 ax2.hist(pos[2], bins=250)
-ax2.set_xlabel("Z / $\sigma$")
+ax2.set_xlabel(r"Z / $\sigma$")
 ax2.set_ylabel("PDF")
 plt.tight_layout()
 plt.savefig(os.path.join("figure", "system_crushed.png"))

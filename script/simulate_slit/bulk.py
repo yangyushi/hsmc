@@ -3,14 +3,12 @@ import tcc
 import json
 import pickle
 import numpy as np
-import pandas as pd
 import configparser
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from scipy.stats import binned_statistic
 mpl.rcParams['font.size'] = 18
 
-import hsmc
+import hsmc  # noqa: E402
 
 
 # Load Parameters
@@ -61,7 +59,7 @@ if not os.path.isfile(os.path.join('result', 'density-profile.csv')):
     plt.plot((0, box[2]), (0, 0), color='k', lw=1)
 
     plt.plot(bc, hist / len(frames) / v_bin, color='tomato')
-    plt.xlabel('Z / $\sigma$')
+    plt.xlabel(r'Z / $\sigma$')
     plt.ylabel('Numble Density')
     plt.tight_layout()
     plt.savefig(os.path.join('figure', 'density.pdf'))
@@ -111,7 +109,7 @@ if not os.path.isfile(os.path.join('result', 'sample_bulk.xyz')):
 
 if not os.path.isfile(os.path.join('result', 'tcc_bulk.pkl')):
     tcc_parameters = {
-        'voronoi_parameter':0.82, 'rcutAA': 1.8,
+        'voronoi_parameter': 0.82, 'rcutAA': 1.8,
         'PBCs': 1, 'Raw': False, 'clusts': False
     }
 
@@ -125,7 +123,7 @@ if not os.path.isfile(os.path.join('result', 'tcc_bulk.pkl')):
     tcc_bulk = tcc.OTF()
 
     tcc_bulk(
-        frames_bulk, box_bulk, 
+        frames_bulk, box_bulk,
         **tcc_parameters
     )
 
