@@ -187,7 +187,7 @@ class HSMC{
 
         // get the volume fraction
         inline double get_vf() const{
-            return (double) n_ / boundary_.volume_ / 6 * M_PI;
+            return (double) n_ * M_PI / (boundary_.volume_ * 6.0);
         }
 
         // rebuild the neighbour list

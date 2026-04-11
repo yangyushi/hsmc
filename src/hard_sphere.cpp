@@ -85,7 +85,7 @@ void HSMC::fill_hs(){
 
 bool HSMC::check_hardwall(){
     for (auto d : hard_dim_){  // check overlap with hard walls
-        for (int i = 0; i < n_ - 1; i++){
+        for (int i = 0; i < n_; i++){
             if (positions_(d, i) < 0) {
                 return true;
             }
@@ -112,7 +112,7 @@ bool HSMC::check_hardwall(int idx){
 
 
 bool HSMC::report_overlap(){
-    for (int i = 0; i < n_ - 1; i++){
+    for (int i = 0; i < n_; i++){
         if (this->check_hardwall(i)){
             return true;
         }

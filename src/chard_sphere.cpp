@@ -17,7 +17,7 @@ PYBIND11_MODULE(chard_sphere, m){
             pybind11::arg("is_hard"),
             pybind11::arg("r_skin")=4
         )
-        .def("fill_idea_gas", &HSMC::fill_ideal_gas)
+        .def("fill_ideal_gas", &HSMC::fill_ideal_gas)
         .def("fill_hs", &HSMC::fill_hs)
         .def("crush", &HSMC::crush)
         .def("crush_along_axis", &HSMC::crush_along_axis)
