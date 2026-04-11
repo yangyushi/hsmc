@@ -1,4 +1,5 @@
 import re
+import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -44,16 +45,16 @@ def get_slice_vf(positions, s_min, s_max, box, axis=2, sigma=1.0):
     """
     r = sigma / 2.0
     z = positions[:, axis]
-    mask_full = np.logical_and( # entire sphere inside region, case 1
+    mask_full = np.logical_and(  # entire sphere inside region, case 1
         z < s_max - r, z > s_min + r
     )
-    mask_minor = np.logical_or( # minority of the sphere inside region
-        np.logical_and(z > s_min - r, z < s_min), # case 2
-        np.logical_and(z < s_max + r, z > s_max)  # case 3
+    mask_minor = np.logical_or(  # minority of the sphere inside region
+        np.logical_and(z > s_min - r, z < s_min),  # case 2
+        np.logical_and(z < s_max + r, z > s_max)   # case 3
     )
-    mask_major = np.logical_or( # majority of sphere inside region
-        np.logical_and(z > s_min, z < s_min + r), # case 4
-        np.logical_and(z < s_max, z > s_max - r)  # case 5
+    mask_major = np.logical_or(  # majority of sphere inside region
+        np.logical_and(z > s_min, z < s_min + r),  # case 4
+        np.logical_and(z < s_max, z > s_max - r)   # case 5
     )
     h = np.min(  # distance between z and closest boundary
         (np.abs(s_max - z),  np.abs(z - s_min)),
@@ -67,22 +68,27 @@ def get_slice_vf(positions, s_min, s_max, box, axis=2, sigma=1.0):
     volumn_sphere_minor = np.sum(
         np.pi * h**2 / 3.0 * (3 * r - h) * mask_minor
     )
-    volumn_sphere = volumn_sphere_full + volumn_sphere_major + volumn_sphere_minor
+    volumn_sphere = \
+        volumn_sphere_full + volumn_sphere_major + volumn_sphere_minor
     return volumn_sphere / volumn_box
 
 
-def get_bulk_vf(frames, box, jump, npoints=50, plot=True, save="state-point.pdf"):
+def get_bulk_vf(
+    frames, box, jump, npoints=50, plot=True, save="state-point.pdf"
+):
     """
     Find the bulk volume fraction in the central region of a slit
 
     Args:
         frames (iterable): a collection of different particles positions, each
             element is a (n, 3) numpy array
-        box (iterable): three numbers indicating the x, y, z size of the simulation box
+        box (iterable): three numbers indicating the x, y, z size of the
+            simulation box
         jump (int): every [jump]th frame will be used in the calculation.
         npoints (int): the number of slice thickness to be calculated.
         plot (bool): if true, generate a plot.
-        save (str): if it is not empty, the plot will be saved using [save] as filename
+        save (str): if it is not empty, the plot will be saved using [save]
+            as filename
 
     Return:
         float: the volumn fraction corresponding to the central region
@@ -92,7 +98,7 @@ def get_bulk_vf(frames, box, jump, npoints=50, plot=True, save="state-point.pdf"
         z_mid += frame[:, -1].mean()
     z_mid /= len(frames)
     z_range = np.linspace(1, z_mid / 2, npoints)
-    n_frames = int(np.ceil(len(frames) / jump))
+
     bulk_vf = np.zeros(npoints)
     count = 0
     for f, frame in enumerate(frames):
@@ -109,7 +115,7 @@ def get_bulk_vf(frames, box, jump, npoints=50, plot=True, save="state-point.pdf"
     vf = (bulk_vf * weight).mean()
     if plot:
         plt.scatter(
-            x = z_range * 2, y=bulk_vf,
+            x=z_range * 2, y=bulk_vf,
             color='w', marker='o', ec='k'
         )
 
@@ -183,7 +189,10 @@ class FrameIter:
             (in 2021, the pandas engine were ~10x faster)
         __func (callable): the function to be called to obtain results
     """
-    def __init__(self, filename, header_pattern, n_comment, engine='pandas', **kwargs):
+
+    def __init__(
+        self, filename, header_pattern, n_comment, engine='pandas', **kwargs
+    ):
         self.numbers = []
         self.__frame = 0
         self.__frame_cursors = []
@@ -215,7 +224,8 @@ class FrameIter:
             i (int): the frame number
 
         Return:
-            np.ndarray: the information of all particles in a frame, shape (n, dim)
+            np.ndarray: the information of all particles in a frame,
+                shape (n, dim)
         """
         if type(i) in INT_TYPES:
             if self.numbers[i] == 0:
@@ -230,12 +240,14 @@ class FrameIter:
                     self.__f, max_rows=self.numbers[i], **self.__kwargs
                 )
             else:
-                raise ValueError("Unknown engine name, select from [numpy] or [pandas]")
+                raise ValueError(
+                    "Unknown engine name, select from [numpy] or [pandas]"
+                )
             if result.ndim == 1:  # for frames with just 1 particle
                 return result[np.newaxis, :]
             else:
                 return result
-        elif type(i) == slice:
+        elif type(i) is slice:
             result = []
             start = i.start if i.start else 0
             stop = i.stop if i.stop else len(self)
@@ -262,13 +274,13 @@ class FrameIter:
         if self.__engine == 'numpy':
             self.__func = np.loadtxt
             self.__kwargs = {
-                key : val for key, val in kwargs.items()
+                key: val for key, val in kwargs.items()
                 if key not in ['skiprows', 'max_rows']
             }
         elif self.__engine == 'pandas':
             self.__func = pd.read_csv
             self.__kwargs = {
-                key : val for key, val in kwargs.items()
+                key: val for key, val in kwargs.items()
                 if key not in ['skiprows', 'nrows']
             }
             self.__kwargs.update({'index_col': False, 'header': None})
@@ -316,7 +328,9 @@ class FrameIter:
                         self.__f, max_rows=self.numbers[i], **self.__kwargs
                     )
                 else:
-                    raise ValueError("Unknown engine name, select from [numpy] or [pandas]")
+                    raise ValueError(
+                        "Unknown engine name, select from [numpy] or [pandas]"
+                    )
                 return result.shape[1]
         return 0
 
@@ -406,7 +420,10 @@ class XYZ(FrameIter):
     Fast XYZ parser that can handle very large xyz file
 
     """
-    def __init__(self, filename, engine='pandas', align_opt=False, **kwargs):
+
+    def __init__(
+        self, filename, engine='pandas', align_opt=False, **kwargs
+    ):
         """
         Args:
             filename (str): the path to the xyz file to be loaded.
@@ -417,7 +434,9 @@ class XYZ(FrameIter):
                 optimisation was mistakenly used for not aligned data,\
                 an runtime error will be raised.
         """
-        if align_opt: self._FrameIter__parse = self.__fast_parse
+        if align_opt:
+            self._FrameIter__parse = self.__fast_parse
+
         super().__init__(
             filename,
             header_pattern=r'(\d+)\n',
@@ -487,7 +506,8 @@ class XYZ(FrameIter):
 
 def __isf_3d(x1, x2, pbc_box=[None, None, None], q=np.pi*2):
     """
-    Calculate the self intermediate scattering function between two configurations.
+    Calculate the self intermediate scattering function between
+        two configurations.
 
     Args:
         x1 (numpy.ndarray): the particle locations, shape (n, 3)
