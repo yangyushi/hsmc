@@ -1,4 +1,6 @@
-# find the path of hsmc
-SN=${0##*/}  # script name
-hsmc=${0%/bin/$SN}  # path to hsmc
-cp -r "$hsmc/script/simulate_slit" "$PWD"
+#!/usr/bin/env sh
+set -eu
+
+PYTHON_BIN="${PYTHON:-python3}"
+
+exec "$PYTHON_BIN" -m hsmc._assets simulate_slit "$PWD"

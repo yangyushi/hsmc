@@ -7,26 +7,39 @@ It is not very fast. If you need large scale simulation, maybe you want to use [
 
 ## Install
 
-You need to have [Eigen](https://eigen.tuxfamily.org/index.php?title=Main_Page) and [pybind11](https://pybind11.readthedocs.io/en/stable/) to build the code. The project can be built with CMake, normally you will do,
+The intended installation flow is now:
 
 ```sh
-mkdir build
-cd build
-cmake ..
-make
-make install
+pip install .
 ```
 
-As a result, the python module (with name `chard_sphere.cpython-xx-xxx.so`) will be created in folder `lib`, as well as the static C++ library (`libhard_sphere.a`).
+This builds and installs:
 
-## Python Frontend
+- the Python package `hsmc`
+- the compiled extension module `hsmc.chard_sphere`
+- the bundled assets under `script/`
+- the helper command `hsmc-create-slit`
 
-The user is expceted to interact with the library via the Python interface. Typically, one shuold
+After installation, the package should be importable directly:
 
-1. copy the file `chard_sphere.cpython-xx-xxx.so` to the working directory; or
-2. add the folder `lib` to `$PYTHONPATH`.
+```py
+import hsmc
+from hsmc import chard_sphere
+```
 
-After that, you should be able to execute the command `from hsmc import chard_sphere` in Python.
+The build still requires [Eigen](https://eigen.tuxfamily.org/index.php?title=Main_Page) to be available for CMake to find during installation.
+
+
+## Bundled Assets
+
+The slit simulation template is shipped with the installed package. After
+installation, you can create a local copy with:
+
+```sh
+hsmc-create-slit
+```
+
+This creates a `simulate_slit/` directory in the current working directory.
 
 
 ## Use the Code in Python

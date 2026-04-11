@@ -1,8 +1,12 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
 
 # set the project name
-project(hsmc VERSION 0.0)
-find_package(pybind11 REQUIRED)
+project(hsmc VERSION 0.0.0)
+
+include(GNUInstallDirs)
+
+set(PYBIND11_FINDPYTHON ON)
+find_package(pybind11 CONFIG REQUIRED)
 find_package(Eigen3 3.3 REQUIRED)
 
 # setup usual compile flag
@@ -29,7 +33,27 @@ target_link_libraries(chard_sphere PRIVATE pybind11::module pybind11::lto Eigen3
 pybind11_extension(chard_sphere)
 set_target_properties(chard_sphere PROPERTIES CXX_VISIBILITY_PRESET "hidden")
 
-# move the libraries to lib folder
-SET(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/lib/hsmc)
-install(TARGETS chard_sphere DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(TARGETS hard_sphere DESTINATION ${CMAKE_SOURCE_DIR}/lib)
+# install the Python package and its extension module into the wheel/site-packages
+install(
+  DIRECTORY lib/hsmc/
+  DESTINATION hsmc
+  FILES_MATCHING
+  PATTERN "*.py"
+  PATTERN "__pycache__" EXCLUDE
+  PATTERN "*.pyc" EXCLUDE
+)
+install(
+  DIRECTORY script/
+  DESTINATION hsmc/script
+  PATTERN "__pycache__" EXCLUDE
+  PATTERN "*.pyc" EXCLUDE
+)
+install(
+  TARGETS chard_sphere
+  LIBRARY DESTINATION hsmc
+  RUNTIME DESTINATION hsmc
+)
+install(
+  PROGRAMS bin/hsmc-create-slit
+  DESTINATION ${CMAKE_INSTALL_BINDIR}
+)

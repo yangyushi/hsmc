@@ -1,0 +1,24 @@
+[build-system]
+requires = [
+    "pybind11>=2.12",
+    "scikit-build-core>=0.10",
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "hsmc"
+version = "0.0.0"
+description = "Hard sphere Monte Carlo simulation"
+readme = "Readme.md"
+requires-python = ">=3.9"
+dependencies = [
+    "matplotlib",
+    "numpy",
+    "pandas",
+]
+
+[tool.scikit-build]
+cmake.build-type = "Release"
+
+[tool.scikit-build.cmake.define]
+PYBIND11_FINDPYTHON = "ON"
