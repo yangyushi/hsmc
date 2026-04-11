@@ -7,7 +7,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "hsmc"
-version = "0.0.0"
+version = "0.0.1"
 description = "Hard sphere Monte Carlo simulation"
 readme = "Readme.md"
 requires-python = ">=3.9"
