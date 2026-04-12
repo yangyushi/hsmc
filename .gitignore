@@ -10,6 +10,12 @@ lib/**/*.a
 .DS_store
 *.swp
 *.xyz
+script/simulate_slit_v2/configure.ini
+script/simulate_slit_v2/result/
+script/simulate_slit_v2/figure/
+script/simulate_slit_v2/tcc/
+script/simulate_slit_v2/workflow.*.json
+script/simulate_slit_v2/workflow.*.log
 
 **/__pycache__
 **.pyc

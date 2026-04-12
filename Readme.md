@@ -19,6 +19,7 @@ This builds and installs:
 - the compiled extension module `hsmc.chard_sphere`
 - the bundled assets under `script/`
 - the helper command `hsmc-create-slit`
+- the helper command `hsmc-create-slit-v2`
 
 After installation, the package should be importable directly:
 
@@ -32,14 +33,22 @@ The build still requires [Eigen](https://eigen.tuxfamily.org/index.php?title=Mai
 
 ## Bundled Assets
 
-The slit simulation template is shipped with the installed package. After
-installation, you can create a local copy with:
+The slit simulation templates are shipped with the installed package. After
+installation, you can create a local copy of the original workflow with:
 
 ```sh
 hsmc-create-slit
 ```
 
 This creates a `simulate_slit/` directory in the current working directory.
+
+The refactored single-entrypoint workflow is available separately with:
+
+```sh
+hsmc-create-slit-v2
+```
+
+This creates a `simulate_slit_v2/` directory in the current working directory.
 
 
 ## Use the Code in Python
