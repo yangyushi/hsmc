@@ -6,9 +6,7 @@ from common.workflow_support import (
     CONFIG_PATH,
     ROOT_DIR,
     config_uses_auto,
-    compute_workflow_metadata,
     ensure_output_directories,
-    ensure_workflow_metadata,
     generated_paths,
     group_generated_paths_by_uuid,
     isf_arrays_path,
@@ -16,8 +14,8 @@ from common.workflow_support import (
     isf_ready,
     read_json,
     remove_generated_outputs,
-    root_metadata_path,
     run_stage,
+    workflow_uuid,
     write_workflow_log,
 )
 from scripts.validate_workflow import validate_environment
@@ -29,7 +27,7 @@ def start_workflow() -> int:
         run_stage("scripts.validate_workflow", "validate_workflow")
     except subprocess.CalledProcessError as exc:
         return exc.returncode
-    current_uuid = ensure_workflow_metadata()["workflow_uuid"]
+    current_uuid = workflow_uuid()
     write_workflow_log("workflow_start", "workflow", current_uuid=current_uuid)
 
     if config_uses_auto():
@@ -62,10 +60,10 @@ def start_workflow() -> int:
 
 
 def check_workflow() -> int:
-    status, metadata = validate_environment(write_artifacts=False, emit_output=False)
+    status, current_uuid = validate_environment(write_artifacts=False, emit_output=False)
     if status != 0:
         return status
-    print(f"Configuration and environment look valid for workflow_uuid={metadata['workflow_uuid']}")
+    print(f"Configuration and environment look valid for workflow_uuid={current_uuid}")
     print(f"Configuration file: {CONFIG_PATH.name}")
     return 0
 
@@ -78,8 +76,7 @@ def validate_results() -> int:
         )
         return 1
 
-    current = compute_workflow_metadata()
-    current_uuid = current["workflow_uuid"]
+    current_uuid = workflow_uuid()
     grouped, untagged = group_generated_paths_by_uuid()
     current_paths = grouped.get(current_uuid, [])
 
@@ -106,20 +103,6 @@ def validate_results() -> int:
         for path in untagged:
             print(f"- {path}")
 
-    metadata_path = root_metadata_path(current_uuid)
-    if metadata_path.is_file():
-        stored_metadata = read_json(metadata_path)
-        if (
-            stored_metadata.get("workflow_uuid") != current_uuid
-            or stored_metadata.get("config_sha256") != current["config_sha256"]
-            or stored_metadata.get("hashed_files") != current["hashed_files"]
-        ):
-            print("Warning: stored workflow metadata does not match the current code/config hashes.")
-            return 1
-    elif current_paths:
-        print("Warning: current UUID artifacts exist but root metadata file is missing.")
-        return 1
-
     current_isf_metadata = isf_metadata_path(current_uuid)
     if current_isf_metadata.is_file():
         isf_metadata = read_json(current_isf_metadata)
@@ -138,7 +121,7 @@ def clean_workflow(force: bool = False) -> int:
         return 0
 
     if not force:
-        print("This will remove generated outputs under result/, figure/, tcc/, and root workflow logs/metadata.")
+        print("This will remove generated outputs under result/, figure/, tcc/, and root workflow logs.")
         try:
             reply = input("Continue? [y/N] ").strip().lower()
         except EOFError:

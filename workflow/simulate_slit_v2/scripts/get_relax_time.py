@@ -8,20 +8,19 @@ from scipy.optimize import curve_fit
 import hsmc
 from common.slit_setup import create_slit_system
 from common.workflow_support import (
-    ensure_workflow_metadata,
     figure_path,
     isf_arrays_path,
     isf_metadata_path,
     load_config,
     snap_dump_frequency,
+    workflow_uuid,
     write_workflow_log,
 )
 
 
 def main():
     conf = load_config()
-    metadata = ensure_workflow_metadata()
-    current_uuid = metadata["workflow_uuid"]
+    current_uuid = workflow_uuid()
 
     length = int(conf["ISF"]["length"])
     jump = int(conf["ISF"]["jump"])
@@ -121,9 +120,17 @@ def main():
     )
 
     if plot_isf:
-        plt.scatter(time, isf, marker="o", color="tomato", fc="none", label="data")
-        plt.plot(time, fitted_curve, color="teal", label="fit")
-        plt.text(time[len(time) // 2], 0.7, "$\\tau=$" + f"{tau_sweeps:.0f} sweeps")
+        plt.scatter(
+            time, isf, marker="o",
+            color="tomato", fc="none", label="data"
+        )
+        plt.plot(
+            time, fitted_curve, color="teal", label="fit"
+        )
+        plt.text(
+            time[len(time) // 2], 0.7,
+            "$\\tau=$" + f"{tau_sweeps:.0f} sweeps"
+        )
         plt.xlabel(f"Lag Time / {jump} sweeps")
         plt.ylabel("ISF")
         plt.ylim(-0.1, 1.1)

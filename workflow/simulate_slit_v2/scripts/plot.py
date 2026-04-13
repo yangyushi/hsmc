@@ -7,11 +7,11 @@ import numpy as np
 
 from common.workflow_support import (
     box_path,
-    ensure_workflow_metadata,
     figure_path,
     load_config,
     tcc_bulk_path,
     tcc_spatial_dist_path,
+    workflow_uuid,
 )
 
 mpl.rcParams["font.family"] = "sans-serif"
@@ -30,7 +30,7 @@ def _load_cluster_map(npz_path):
 
 def main():
     conf = load_config()
-    current_uuid = ensure_workflow_metadata()["workflow_uuid"]
+    current_uuid = workflow_uuid()
     kind = conf["Boundary"]["kind"]
 
     tcc_dist, spatial_data = _load_cluster_map(tcc_spatial_dist_path(current_uuid))

@@ -13,12 +13,12 @@ from common.workflow_support import (
     box_path,
     cluster_population_mapping,
     density_profile_path,
-    ensure_workflow_metadata,
     figure_path,
     load_config,
     resolve_dump_frequency,
     slit_sample_path,
     tcc_bulk_path,
+    workflow_uuid,
     write_workflow_log,
 )
 
@@ -27,8 +27,7 @@ mpl.rcParams["font.size"] = 18
 
 def main():
     conf = load_config()
-    metadata = ensure_workflow_metadata()
-    current_uuid = metadata["workflow_uuid"]
+    current_uuid = workflow_uuid()
 
     n_particle = int(conf["System"]["n"])
     vf_init = float(conf["System"]["vf_init"])
@@ -37,7 +36,9 @@ def main():
     sweep_total_bulk = int(float(conf["Run"]["total_bulk"]))
     dump_frequency_bulk_config = conf["Run"]["dump_frequency_bulk"]
 
-    dump_frequency_bulk = resolve_dump_frequency(dump_frequency_bulk_config, current_uuid)
+    dump_frequency_bulk = resolve_dump_frequency(
+        dump_frequency_bulk_config, current_uuid
+    )
     write_workflow_log(
         "resolved_dump_frequency",
         "bulk",
@@ -74,7 +75,12 @@ def main():
         z_mid /= len(slit_frames)
         density = hist / len(slit_frames) / v_bin
 
-        np.savez(density_path, bin_centres=bc, density=density, z_mid=np.array([z_mid]))
+        np.savez(
+            density_path,
+            bin_centres=bc,
+            density=density,
+            z_mid=np.array([z_mid])
+        )
         plt.plot((z_mid, z_mid), (0, 2), color="k", lw=1)
         plt.plot((0, box[2]), (0, 0), color="k", lw=1)
         plt.plot(bc, density, color="tomato")
@@ -176,8 +182,14 @@ def main():
 
         summary = cluster_population_mapping(tcc_bulk.population.mean(axis=0))
         cluster_names = np.array(list(summary.keys()))
-        populations = np.array([summary[name] for name in cluster_names], dtype=float)
-        np.savez(bulk_summary_path, cluster_names=cluster_names, populations=populations)
+        populations = np.array(
+            [summary[name] for name in cluster_names], dtype=float
+        )
+        np.savez(
+            bulk_summary_path,
+            cluster_names=cluster_names,
+            populations=populations
+        )
 
 
 if __name__ == "__main__":

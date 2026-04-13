@@ -1,10 +1,59 @@
 #!/usr/bin/env python3
+"""Helpers for constructing the initial slit simulation configuration."""
+
+from typing import Literal, Protocol, TypedDict
+
 import numpy as np
 
 import hsmc
 
 
 VALID_PLANES = ("fcc100", "fcc111", "fcc110", "hcp110")
+BoundaryKind = Literal["hardwall", "fcc100", "fcc111", "fcc110", "hcp110"]
+
+
+class SlitSimulationSystem(Protocol):
+    """Protocol for the simulation system used by the slit workflow."""
+
+    def load_positions(self, positions: np.ndarray) -> None:
+        """Load particle positions into the simulation system."""
+
+    def set_indices(self, indices: np.ndarray) -> None:
+        """Restrict mobile particles to the given indices."""
+
+    def fill_hs(self) -> None:
+        """Initialize hard-sphere data structures."""
+
+    def crush_along_axis(
+        self,
+        volume_fraction: float,
+        rate: float,
+        axis: int,
+    ) -> None:
+        """Compress the system along one axis."""
+
+    def sweep(self) -> None:
+        """Perform one Monte Carlo sweep."""
+
+    def report_overlap(self) -> bool:
+        """Report whether particles overlap."""
+
+    def copy_positions(self) -> np.ndarray:
+        """Return a copy of particle positions."""
+
+    def get_box(self) -> list[float]:
+        """Return the current box dimensions."""
+
+
+class SlitSystemSetup(TypedDict):
+    """Initial system state returned to workflow stages before simulation starts."""
+
+    system: SlitSimulationSystem
+    box: np.ndarray
+    indices_to_move: np.ndarray
+    configuration: np.ndarray
+    walls: np.ndarray | None
+    gas: np.ndarray | None
 
 
 def create_slit_system(
@@ -15,8 +64,10 @@ def create_slit_system(
     r_skin: float,
     vf_crystal: float,
     z_final: float,
-    kind: str,
-):
+    kind: BoundaryKind,
+) -> SlitSystemSetup:
+    """Build the slit system and return all state needed by later workflow stages."""
+
     v_sph = np.pi * n_particles * sigma ** 3 / 6
     l_xy = np.sqrt(v_sph / vf_final / z_final)
 

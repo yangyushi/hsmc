@@ -8,19 +8,18 @@ from tqdm import tqdm
 from common.slit_setup import create_slit_system
 from common.workflow_support import (
     box_path,
-    ensure_workflow_metadata,
     figure_path,
     load_config,
     resolve_dump_frequency,
     slit_sample_path,
+    workflow_uuid,
     write_workflow_log,
 )
 
 
 def main():
     conf = load_config()
-    metadata = ensure_workflow_metadata()
-    current_uuid = metadata["workflow_uuid"]
+    current_uuid = workflow_uuid()
 
     n_particles = int(conf["System"]["n"])
     sigma = 1

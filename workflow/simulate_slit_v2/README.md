@@ -55,9 +55,9 @@ When set to `auto`, the workflow estimates the ISF relaxation time and snaps the
 
 ## Integrity and Outputs
 
-Every run is tagged by one deterministic workflow UUID derived from the copied workflow code and the active `configure.ini`. The UUID is written into:
+Every run is tagged by one deterministic workflow ID, stored as a hex digest over all `.py` files under `common/` and `scripts/` plus the active `configure.ini`. The ID is written into:
 
-- root-level log and metadata filenames such as `workflow.<uuid>.log`
+- root-level log filenames such as `workflow.<uuid>.log`
 - result artifact filenames under `result/`
 - figure filenames under `figure/`
 

@@ -9,10 +9,10 @@ from scipy.stats import binned_statistic
 import hsmc
 from common.workflow_support import (
     box_path,
-    ensure_workflow_metadata,
     load_config,
     slit_sample_path,
     tcc_spatial_dist_path,
+    workflow_uuid,
 )
 
 mpl.rcParams["font.size"] = 18
@@ -20,7 +20,7 @@ mpl.rcParams["font.size"] = 18
 
 def main():
     conf = load_config()
-    current_uuid = ensure_workflow_metadata()["workflow_uuid"]
+    current_uuid = workflow_uuid()
     output_path = tcc_spatial_dist_path(current_uuid)
     if output_path.is_file():
         return
