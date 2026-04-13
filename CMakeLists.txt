@@ -53,7 +53,3 @@ install(
   LIBRARY DESTINATION hsmc
   RUNTIME DESTINATION hsmc
 )
-install(
-  PROGRAMS bin/hsmc-create-slit bin/hsmc-create-slit-v2
-  DESTINATION ${CMAKE_INSTALL_BINDIR}
-)

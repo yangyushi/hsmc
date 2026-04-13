@@ -38,6 +38,16 @@ def copy_simulate_slit_v2(destination: str | Path = ".") -> Path:
     return _copy_asset("simulate_slit_v2", destination)
 
 
+def create_slit_main() -> int:
+    copy_simulate_slit(Path.cwd())
+    return 0
+
+
+def create_slit_v2_main() -> int:
+    copy_simulate_slit_v2(Path.cwd())
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:

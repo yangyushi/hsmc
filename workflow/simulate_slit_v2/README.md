@@ -1,6 +1,6 @@
 # Slit Simulation Workflow
 
-This template is meant to be copied into a standalone experiment directory by `bin/hsmc-create-slit-v2`, configured locally, and then run through one command:
+This template is meant to be copied into a standalone experiment directory by `hsmc-workflow create simulate_slit_v2`, configured locally, and then run through one command:
 
 ```bash
 python3 workflow.py start

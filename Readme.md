@@ -18,8 +18,7 @@ This builds and installs:
 - the Python package `hsmc`
 - the compiled extension module `hsmc.chard_sphere`
 - the bundled assets under `workflow`
-- the helper command `hsmc-create-slit`
-- the helper command `hsmc-create-slit-v2`
+- the helper command `hsmc-workflow`
 
 After installation, the package should be importable directly:
 
@@ -31,24 +30,40 @@ from hsmc import chard_sphere
 The build still requires [Eigen](https://eigen.tuxfamily.org/index.php?title=Main_Page) to be available for CMake to find during installation.
 
 
-## Bundled Assets
+## Bundled Workflows
 
-The slit simulation templates are shipped with the installed package. After
-installation, you can create a local copy of the original workflow with:
-
-```sh
-hsmc-create-slit
-```
-
-This creates a `simulate_slit/` directory in the current working directory.
-
-The refactored single-entrypoint workflow is available separately with:
+The workflow templates are shipped with the installed package. List the
+available workflows with:
 
 ```sh
-hsmc-create-slit-v2
+hsmc-workflow list
 ```
 
-This creates a `simulate_slit_v2/` directory in the current working directory.
+Create a workflow in the current working directory with:
+
+```sh
+hsmc-workflow create simulate_slit
+```
+
+or:
+
+```sh
+hsmc-workflow create simulate_slit_v2
+```
+
+You can also choose a destination directory explicitly:
+
+```sh
+hsmc-workflow create simulate_slit_v2 /path/to/output
+```
+
+General command help is available with:
+
+```sh
+hsmc-workflow help
+```
+
+For contributor workflow packaging rules, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 
 ## Use the Code in Python

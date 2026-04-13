@@ -7,7 +7,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "hsmc"
-version = "0.0.1"
+version = "0.0.2"
 description = "Hard sphere Monte Carlo simulation"
 readme = "Readme.md"
 requires-python = ">=3.9"
@@ -16,6 +16,9 @@ dependencies = [
     "numpy",
     "pandas",
 ]
+
+[project.scripts]
+hsmc-workflow = "hsmc._assets:workflow_cli_main"
 
 [tool.scikit-build]
 cmake.build-type = "Release"
