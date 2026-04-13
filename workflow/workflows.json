@@ -1,0 +1,14 @@
+{
+  "workflows": [
+    {
+      "name": "simulate_slit",
+      "bundle_dir": "simulate_slit",
+      "copy_dir": "simulate_slit"
+    },
+    {
+      "name": "simulate_slit_v2",
+      "bundle_dir": "simulate_slit_v2",
+      "copy_dir": "simulate_slit_v2"
+    }
+  ]
+}
