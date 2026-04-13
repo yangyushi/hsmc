@@ -17,7 +17,7 @@ This builds and installs:
 
 - the Python package `hsmc`
 - the compiled extension module `hsmc.chard_sphere`
-- the bundled assets under `script/`
+- the bundled assets under `workflow`
 - the helper command `hsmc-create-slit`
 - the helper command `hsmc-create-slit-v2`
 

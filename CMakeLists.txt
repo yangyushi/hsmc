@@ -43,8 +43,8 @@ install(
   PATTERN "*.pyc" EXCLUDE
 )
 install(
-  DIRECTORY script/
-  DESTINATION hsmc/script
+  DIRECTORY workflow/
+  DESTINATION hsmc/workflow
   PATTERN "__pycache__" EXCLUDE
   PATTERN "*.pyc" EXCLUDE
 )

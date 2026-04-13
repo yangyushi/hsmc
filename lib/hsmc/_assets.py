@@ -7,11 +7,11 @@ from pathlib import Path
 
 
 def _source_asset_path(asset_name: str) -> Path:
-    package_asset = resources.files("hsmc").joinpath("script", asset_name)
+    package_asset = resources.files("hsmc").joinpath("workflow", asset_name)
     if package_asset.is_dir():
         return Path(package_asset)
 
-    repo_asset = Path(__file__).resolve().parents[2] / "script" / asset_name
+    repo_asset = Path(__file__).resolve().parents[2] / "workflow" / asset_name
     if repo_asset.is_dir():
         return repo_asset
 
