@@ -65,7 +65,9 @@ def main():
         stat_tcc = np.zeros(bin_centres.shape)
         stat_all = np.zeros(bin_centres.shape)
         for frame_index in range(len(tcc_parser)):
-            count = tcc_parser.cluster_bool[cluster_name][frame_index].ravel().astype(int)
+            count = tcc_parser.cluster_bool[
+                cluster_name
+            ][frame_index].ravel().astype(int)
             z = frames[frame_index][:, 2]
             stat_tcc += binned_statistic(
                 x=z - z_mid, values=count, statistic="sum", bins=bins

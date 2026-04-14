@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import configparser
 import importlib
-import shutil
 import sys
 
 from common.slit_setup import VALID_PLANES
@@ -21,8 +20,16 @@ REQUIRED_MODULES = ("numpy", "matplotlib", "scipy", "hsmc", "tcc")
 VALID_BOUNDARY_KINDS = ("hardwall", *VALID_PLANES)
 
 
-def fail(message: str, current_uuid: str | None = None, **fields: object) -> int:
-    write_workflow_log("failure", "validate_workflow", current_uuid=current_uuid, error=message, **fields)
+def fail(
+    message: str, current_uuid: str | None = None, **fields: object
+) -> int:
+    write_workflow_log(
+        "failure",
+        "validate_workflow",
+        current_uuid=current_uuid,
+        error=message,
+        **fields
+    )
     print(message, file=sys.stderr)
     for key, value in fields.items():
         print(f"{key}: {value}", file=sys.stderr)
@@ -108,7 +115,8 @@ def _validate_dump_frequency(
         ) from exc
     if parsed <= 0:
         raise ValueError(
-            f"Configuration entry [Run] {option} must be a positive integer or auto."
+            f"Configuration entry [Run] {option} must be "
+            "a positive integer or auto."
         )
 
 
@@ -153,12 +161,16 @@ def validate_configuration() -> None:
         ) from exc
 
 
-def validate_environment(write_artifacts: bool = True, emit_output: bool = True) -> tuple[int, str | None]:
+def validate_environment(
+    write_artifacts: bool = True,
+    emit_output: bool = True
+) -> tuple[int, str | None]:
     ensure_output_directories()
     if not CONFIG_PATH.is_file():
         return fail(
             f"Missing configuration file: {CONFIG_PATH.name}. "
-            f"Copy {CONFIG_TEMPLATE_PATH.name} to {CONFIG_PATH.name} and fill in the values."
+            f"Copy {CONFIG_TEMPLATE_PATH.name} to {CONFIG_PATH.name}"
+            " and fill in the values."
         ), None
 
     current_uuid = workflow_uuid()
@@ -172,7 +184,9 @@ def validate_environment(write_artifacts: bool = True, emit_output: bool = True)
         ), current_uuid
 
     if write_artifacts:
-        write_workflow_log("stage_start", "validate_workflow", current_uuid=current_uuid)
+        write_workflow_log(
+            "stage_start", "validate_workflow", current_uuid=current_uuid
+        )
 
     missing_modules = []
     for module_name in REQUIRED_MODULES:
@@ -182,7 +196,9 @@ def validate_environment(write_artifacts: bool = True, emit_output: bool = True)
             missing_modules.append((module_name, str(exc)))
 
     if missing_modules:
-        details = "; ".join(f"{name}: {error}" for name, error in missing_modules)
+        details = "; ".join(
+            f"{name}: {error}" for name, error in missing_modules
+        )
         return fail(
             "Missing or broken Python dependencies for the slit workflow.",
             current_uuid=current_uuid,
@@ -191,24 +207,20 @@ def validate_environment(write_artifacts: bool = True, emit_output: bool = True)
 
     import tcc  # noqa: E402
 
-    if shutil.which("tcc") is None:
-        return fail(
-            "Missing `tcc` executable in PATH.",
-            current_uuid=current_uuid,
-        ), current_uuid
-
     try:
         tcc.Parser("tcc")
         tcc.OTF()
     except Exception as exc:
         return fail(
-            "The Python `tcc` package is installed but not usable in this workflow.",
+            "The `tcc` package is installed but not unavailable.",
             current_uuid=current_uuid,
             error_detail=str(exc),
         ), current_uuid
 
     if write_artifacts:
-        write_workflow_log("stage_end", "validate_workflow", current_uuid=current_uuid)
+        write_workflow_log(
+            "stage_end", "validate_workflow", current_uuid=current_uuid
+        )
     if emit_output:
         print(f"workflow_uuid={current_uuid}")
     return 0, current_uuid

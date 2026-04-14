@@ -41,7 +41,9 @@ def start_workflow() -> int:
             )
         else:
             try:
-                run_stage("scripts.get_relax_time", "isf", current_uuid=current_uuid)
+                run_stage(
+                    "scripts.get_relax_time", "isf", current_uuid=current_uuid
+                )
             except subprocess.CalledProcessError as exc:
                 return exc.returncode
 
@@ -60,11 +62,17 @@ def start_workflow() -> int:
 
 
 def check_workflow() -> int:
-    status, current_uuid = validate_environment(write_artifacts=False, emit_output=False)
+    status, current_uuid = validate_environment(
+        write_artifacts=False, emit_output=False
+    )
     if status != 0:
         return status
-    print(f"Configuration and environment look valid for workflow_uuid={current_uuid}")
-    print(f"Configuration file: {CONFIG_PATH.name}")
+    print(
+        f"Configuration and environment look valid for {current_uuid}"
+    )
+    print(
+        f"Configuration file: {CONFIG_PATH.name}"
+    )
     return 0
 
 
@@ -90,7 +98,7 @@ def validate_results() -> int:
         for path in sorted(current_paths):
             print(f"- {path.relative_to(ROOT_DIR)}")
     else:
-        print("Warning: no generated artifacts match the current code and configuration.")
+        print("Warning: no artifact match the current code and configuration.")
 
     stale_uuids = sorted(uuid for uuid in grouped if uuid != current_uuid)
     if stale_uuids:
@@ -107,7 +115,7 @@ def validate_results() -> int:
     if current_isf_metadata.is_file():
         isf_metadata = read_json(current_isf_metadata)
         if isf_metadata.get("workflow_uuid") != current_uuid:
-            print("Warning: ISF metadata UUID does not match the current workflow UUID.")
+            print("Warning: ISF UUID does not match the workflow UUID.")
             return 1
 
     print("Validation completed.")
@@ -121,7 +129,10 @@ def clean_workflow(force: bool = False) -> int:
         return 0
 
     if not force:
-        print("This will remove generated outputs under result/, figure/, tcc/, and root workflow logs.")
+        print(
+            "This will remove generated outputs under "
+            "result/, figure/, tcc/, and root workflow logs."
+        )
         try:
             reply = input("Continue? [y/N] ").strip().lower()
         except EOFError:
@@ -140,11 +151,22 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Slit workflow entrypoint")
     subparsers = parser.add_subparsers(dest="command")
 
-    subparsers.add_parser("start", help="start the simulation workflow")
-    subparsers.add_parser("check", help="check configuration and environment")
-    subparsers.add_parser("validate", help="validate generated artifacts against the current code and configuration")
-    clean_parser = subparsers.add_parser("clean", help="remove generated outputs")
-    clean_parser.add_argument("--yes", action="store_true", help="skip confirmation prompt")
+    subparsers.add_parser(
+        "start", help="start the simulation workflow"
+    )
+    subparsers.add_parser(
+        "check", help="check configuration and environment"
+    )
+    subparsers.add_parser(
+        "validate",
+        help="validate outputs against the current code and configuration"
+    )
+    clean_parser = subparsers.add_parser(
+        "clean", help="remove generated outputs"
+    )
+    clean_parser.add_argument(
+        "--yes", action="store_true", help="skip confirmation prompt"
+    )
 
     return parser
 

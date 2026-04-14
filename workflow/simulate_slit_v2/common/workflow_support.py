@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Shared filesystem, metadata, and execution helpers for the slit workflow."""
 
-import configparser
-import hashlib
-import json
-import math
 import os
 import re
-import shutil
-import subprocess
 import sys
+import json
+import math
+import shutil
+import hashlib
+import subprocess
+import configparser
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,6 +23,7 @@ CONFIG_PATH = ROOT_DIR / "configure.ini"
 CONFIG_TEMPLATE_PATH = ROOT_DIR / "configure.ini.example"
 RESULT_DIR = ROOT_DIR / "result"
 FIGURE_DIR = ROOT_DIR / "figure"
+HASH_SIZE = 8
 TCC_DIR = ROOT_DIR / "tcc"
 UUID_PATTERN = re.compile(r"(?P<uuid>[0-9a-f]{64})")
 WORKFLOW_CODE_DIRS = ("common", "scripts")
@@ -86,8 +87,7 @@ def _workflow_digest(config_path: Path) -> str:
     """
     Digest workflow source files
     """
-
-    hasher = hashlib.sha256()
+    hasher = hashlib.blake2b(digest_size=HASH_SIZE)
     for path in _workflow_source_files():
         relative_path = path.relative_to(ROOT_DIR).as_posix()
         hasher.update(relative_path.encode("utf-8"))
