@@ -1,24 +1,29 @@
 #ifndef HARD_SPHERE
 #define HARD_SPHERE
-#include <regex>
-#include <cmath>
-#include <array>
-#include <vector>
-#include <random>
-#include <fstream>
-#include <iostream>
-#include <iomanip>
-#include <iterator>
-#include <stdexcept>
+
 #include <algorithm>
+#include <array>
+#include <cmath>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <numeric>
+#include <random>
+#include <regex>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
 #include <Eigen/Dense>
 
-using namespace std;
-using Coord3D = Eigen::Matrix<double, 3, Eigen::Dynamic, Eigen::RowMajor>;  // (3, n)
-using CellIndices = Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-using Vec3D = Eigen::Vector3d;  // (3, 1)
-using Vec2D = Eigen::Vector2d;  // (2, 1)
+namespace hsmc {
 
+using Coord3D = Eigen::Matrix<double, 3, Eigen::Dynamic, Eigen::RowMajor>;
+using CellIndices =
+    Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+using Vec3D = Eigen::Vector3d;
+using Vec2D = Eigen::Vector2d;
 
 /*
  * Calculate the N-Dimensional Cartesian product
@@ -27,14 +32,12 @@ using Vec2D = Eigen::Vector2d;  // (2, 1)
  *      product_nd([[1, 2], [3, 4]]) -> [[1, 3], [1, 4], [2, 3], [2, 4]]
  */
 template<class T>
-vector<vector<T>> product_nd(const vector<vector<T>>& arrays);
-
+std::vector<std::vector<T>> product_nd(const std::vector<std::vector<T>>& arrays);
 
 /*
 * Bheaving like ``numpy.unravel_index`` with 'C' order (last axis changing fastest)
 */
-vector<int> unravel_index(int index, const vector<int>& shape);
-
+std::vector<int> unravel_index(int index, const std::vector<int>& shape);
 
 /*
  * Applying periodic boundary conditions in any dimension, the pbc
@@ -43,46 +46,57 @@ vector<int> unravel_index(int index, const vector<int>& shape);
  *      with shape (dimension, n_particles)
  */
 template<class T>
-class PBC{
-    public:
-        PBC(vector<double> box, vector<bool> is_pbc)
-            : box_{box}, is_pbc_{is_pbc}
-        {
-            if (box_.size() != is_pbc_.size()) {
-                throw("PBC box size mismatch");
-            }
+class PBC {
+  public:
+    PBC(std::vector<double> box, std::vector<bool> is_pbc)
+        : box_{std::move(box)},
+          dim_{static_cast<int>(box_.size())},
+          is_pbc_{std::move(is_pbc)} {
+        if (box_.size() != is_pbc_.size()) {
+            throw std::runtime_error("PBC box size mismatch");
+        }
+        refresh_cache();
+        update_volume();
+    }
+
+    std::vector<double> box_;
+
+    void fix_position(T& positions) const;
+    void fix_position(T& positions, int i) const;
+    double get_dist_sq(const T& positions, int i, int j) const;
+
+    void rescale(double scale) {
+        for (double& side : box_) {
+            side *= scale;
+        }
+        refresh_cache();
+        update_volume();
+    }
+
+    void rescale(double scale, int axis) {
+        if (axis < dim_) {
+            box_[axis] *= scale;
+            refresh_cache();
             update_volume();
-            dim_ = box_.size();
+            return;
         }
-        vector<double> box_;
-        void fix_position(T& positions) const;
-        void fix_position(T& positions, int i) const;
-        double get_dist_sq(const T& positions, int i, int j) const;
+        throw std::runtime_error("Trying to rescale with invalid axis index");
+    }
 
-        // rescale the box homogeneously
-        void rescale(double scale){
-            for (auto& side : box_) {
-                side *= scale;
-            }
-            this->update_volume();
-        }
-        
-        // rescale the box along one axis
-        void rescale(double scale, int axis){
-            if (axis < dim_){
-                box_[axis] *= scale;
-                this->update_volume();
-            } else {
-                throw("Trying to rescale with invalid axis index");
-            }
-        }
+    double volume_ = 0.0;
 
-        double volume_;
+  private:
+    int dim_ = 0;
+    std::vector<bool> is_pbc_;
+    std::array<double, 3> box_cache_{{1.0, 1.0, 1.0}};
+    std::array<double, 3> inv_box_cache_{{1.0, 1.0, 1.0}};
+    std::array<bool, 3> is_pbc_cache_{{false, false, false}};
 
-    private:
-        int dim_;
-        void update_volume();
-        vector<bool> is_pbc_;
+    void update_volume();
+    void refresh_cache();
+    double axis_box(int axis) const;
+    double axis_inv_box(int axis) const;
+    bool axis_is_pbc(int axis) const;
 };
 
 /*
@@ -92,33 +106,30 @@ class PBC{
  *      with shape (dimension, n_particles)
  */
 template<class T>
-class VerletList{
-    public:
-        VerletList(double r_cut, double r_skin);
-        /*
-         * Build Verlet list without any periodic boundary
-         */
-        void build(const T& positions);
-        /*
-         * Build Verlet list while applying PBC for distance calculation
-         */
-        void build(const T& positions, const PBC<T>& boundary);
-        /*
-         * For particle [i], retrieve the indices of neighbour particles
-         */
-        vector<int> get_neighbours(int i);
-        double dr_sq_;  // (r_skin - r_cut) ^ 2 for auto-update
-    private:
-        vector<int> nlist_;  // a collection of all the neighbour indices
-        vector<int> point_;  // nlist_[ point_[i] ] -> the first neighbour of particle i
-        double rc_;
-        double rc2_;
-        double rl_;
-        double rl2_;
-        int point_size_ = 0;  // particle number + 1, point_.size()
-        int size_ = 0;  // particle number
-};
+class VerletList {
+  public:
+    VerletList(double r_cut, double r_skin);
 
+    void build(const T& positions);
+    void build(const T& positions, const PBC<T>& boundary);
+    std::vector<int> get_neighbours(int i) const;
+
+    int begin_offset(int i) const { return point_[i]; }
+    int end_offset(int i) const { return point_[i + 1]; }
+    int neighbour_at(int offset) const { return nlist_[offset]; }
+
+    double dr_sq_;
+
+  private:
+    std::vector<int> nlist_;
+    std::vector<int> point_;
+    double rc_;
+    double rc2_;
+    double rl_;
+    double rl2_;
+    int point_size_ = 0;
+    int size_ = 0;
+};
 
 /*
  * Using the Cell linked list to accelerate the distance calculation
@@ -127,29 +138,28 @@ class VerletList{
  *      with shape (dimension, n_particles)
  */
 template<class T>
-class CellList{
-    public:
-        CellList(double r_cut, vector<double> box, vector<bool> is_pbc);
-        void build(const T& positions);
-    private:
-        int dim_;
-        double r_cut_;
-        int sc_;
-        int size_;
-        vector<int> head_shape_;
-        vector<double> box_;
-        vector<bool> is_pbc_;
-        PBC<T> boundary_;
-};
+class CellList {
+  public:
+    CellList(double r_cut, std::vector<double> box, std::vector<bool> is_pbc);
+    void build(const T& positions);
 
+  private:
+    int dim_;
+    double r_cut_;
+    int sc_;
+    int size_;
+    std::vector<int> head_shape_;
+    std::vector<double> box_;
+    std::vector<bool> is_pbc_;
+    PBC<T> boundary_;
+};
 
 /*
  * Dump the current phase point to an xyz file
  * It works with both 2D and 3D system
  */
 template<class T>
-void dump(const T& system, string filename);
-
+void dump(const T& system, const std::string& filename);
 
 /*
  * Load the phase point from the *last* frame of an xyz file, then rebuild the
@@ -158,119 +168,90 @@ void dump(const T& system, string filename);
  *      the `dump` function
  */
 template<class T>
-void load(T& system, string filename);
-
+void load(T& system, const std::string& filename);
 
 /*
  * Hard Sphere Monte-Carlo simulation without neighbout lists
  */
-class HSMC{
-    public:
-        HSMC(
-            int n, vector<double> box,
-            vector<bool> is_pbc, vector<bool> is_hard, double r_skin
-        );
-        int dim_ = 3;
-        int n_;
-        vector<double> box_;
-        Coord3D positions_;
+class HSMC {
+  public:
+    HSMC(
+        int n, std::vector<double> box,
+        std::vector<bool> is_pbc, std::vector<bool> is_hard, double r_skin
+    );
 
-        void fill_ideal_gas(); // radomly fill the box with ideal gas 
-        void fill_hs(); // radomly fill the box with hard spheres
-        void sweep();  // try to make N movements
+    int dim_ = 3;
+    int n_;
+    std::vector<double> box_;
+    Coord3D positions_;
 
-        // rescale box to the target volume fraction
-        void crush(double target_vf, double delta_vf);
+    void fill_ideal_gas();
+    void fill_hs();
+    void sweep();
 
-        // rescale on side of the box to the target volume fraction
-        void crush_along_axis(double target_vf, double delta_vf, int axis);
+    void crush(double target_vf, double delta_vf);
+    void crush_along_axis(double target_vf, double delta_vf, int axis);
 
-        // get the volume fraction
-        inline double get_vf() const{
-            return (double) n_ * M_PI / (boundary_.volume_ * 6.0);
-        }
+    double get_vf() const {
+        return static_cast<double>(n_) * M_PI / (boundary_.volume_ * 6.0);
+    }
 
-        // rebuild the neighbour list
-        inline void rebuild_nlist(){
-            vlist_.build(positions_, boundary_);
-            total_disp_.setZero();
-        }
+    void rebuild_nlist() {
+        vlist_.build(positions_, boundary_);
+        total_disp_.setZero();
+        ldi_ = 0;
+    }
 
-        /*
-         * these functions were created for the python end
-         */
-        void set_indices(const vector<int>& indices){
-            rand_indices_ = indices;
-        }  // reset the rand_indices_
+    void set_indices(const std::vector<int>& indices) {
+        rand_indices_ = indices;
+    }
 
-        // check the existence of overlap via brutal force calculation, O(N^2)
-        bool report_overlap();
+    bool report_overlap();
 
-        Coord3D& get_positions() {return positions_;}
-        vector<double> get_box() {return box_;}
-        const Coord3D& view_positions() const {return positions_;}
-        void load_positions(Coord3D positions){
-            positions_ = positions;
-            this->rebuild_nlist();
-        }
-        string repr() const;
-        string str() const;
+    Coord3D& get_positions() { return positions_; }
+    std::vector<double> get_box() { return box_; }
+    const Coord3D& view_positions() const { return positions_; }
+    void load_positions(Coord3D positions) {
+        positions_ = std::move(positions);
+        rebuild_nlist();
+    }
+    std::string repr() const;
+    std::string str() const;
 
-    private:
-        double step_;  // maximum random movement
-        PBC<Coord3D> boundary_;
-        Coord3D total_disp_;  // total diplacements of each particle
-        vector<bool> is_pbc_;
-        vector<bool> is_hard_;
-        vector<int> hard_dim_; // dimensions with hard walls
-        vector<int> rand_indices_;
-        VerletList<Coord3D> vlist_;
-        int ldi_ = 0;  // largest displacement index
-        vector<array<int, 2>> get_overlap_indices();
-        vector<int> get_neighbours(int i){
-            return vlist_.get_neighbours(i);
-        }
+  private:
+    double step_ = 1.0;
+    PBC<Coord3D> boundary_;
+    Coord3D total_disp_;
+    std::vector<bool> is_pbc_;
+    std::vector<bool> is_hard_;
+    std::vector<int> hard_dim_;
+    std::vector<int> rand_indices_;
+    VerletList<Coord3D> vlist_;
+    int ldi_ = 0;
+    std::mt19937 rng_;
+    std::uniform_real_distribution<double> unit_dist_;
+    std::uniform_real_distribution<double> symmetric_dist_;
 
-        /*
-         * Move a particle randomly, only accept without overlap.
-         * For each movement, also keep a record of the total displacement
-         *   for updating the neighbour list
-         */
-        bool advance(int idx);
+    std::vector<std::array<int, 2>> get_overlap_indices();
+    std::vector<int> get_neighbours(int i) const {
+        return vlist_.get_neighbours(i);
+    }
 
-        // Try to remove all the overlapped particles
-        void remove_overlap(); 
-
-        // Randomly change the order of movement during a sweep
-        void shuffle_indices();
-
-        // Check if one particle is overlapping
-        bool check_overlap(int idx);
-
-        /*
-         * Check if overlap exist at all, the fixed particles were allowed
-         *   to overlap
-         */
-        bool check_overlap();
-
-        // Check if overlap with hard boundaries
-        bool check_hardwall();
-
-        // Check if particle idx overlap with hard boundaries
-        bool check_hardwall(int idx);
-
-        /*
-         * Check if the verlet list needs update after moveing a single particle
-         */
-        void check_disp_sum(int idx, const Vec3D& disp);
-
-        /*
-         * Adjust the movement step based on the accptance ratio
-         *   following Allen & Tildesley's liquid simulation book
-         */
-        void adjust_step(int accept_number);
+    Vec3D random_position();
+    Vec3D random_displacement();
+    bool advance(int idx);
+    void remove_overlap();
+    void shuffle_indices();
+    bool check_overlap(int idx);
+    bool check_overlap();
+    bool check_hardwall();
+    bool check_hardwall(int idx);
+    void check_disp_sum(int idx, const Vec3D& disp);
+    void adjust_step(int accept_number);
 };
 
-
 #include "hard_sphere.tpp"
+
+}  // namespace hsmc
+
 #endif

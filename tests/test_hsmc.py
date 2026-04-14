@@ -1,5 +1,6 @@
 import sys
 sys.path.append('../lib')
+import numpy as np
 from hsmc import chard_sphere
 
 
@@ -35,3 +36,19 @@ def test_hsmc():
 
 if __name__ == "__main__":
     test_hsmc()
+
+
+def test_report_overlap_detects_direct_position_mutation():
+    system = chard_sphere.HSMC(
+        8,
+        [8, 8, 8],
+        [True, True, False],
+        [False, False, True],
+    )
+    system.fill_ideal_gas()
+
+    positions = system.get_positions()
+    positions[:, 0] = positions[:, 1]
+
+    assert np.allclose(positions[:, 0], positions[:, 1])
+    assert system.report_overlap()
