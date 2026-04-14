@@ -8,11 +8,12 @@ from scipy.stats import binned_statistic
 
 import hsmc
 from common.workflow_support import (
+    active_workflow_uuid,
     box_path,
+    get_workflow_logger,
     load_config,
     slit_sample_path,
     tcc_spatial_dist_path,
-    workflow_uuid,
 )
 
 mpl.rcParams["font.size"] = 18
@@ -20,9 +21,11 @@ mpl.rcParams["font.size"] = 18
 
 def main():
     conf = load_config()
-    current_uuid = workflow_uuid()
+    current_uuid = active_workflow_uuid()
+    logger = get_workflow_logger("analysis", current_uuid)
     output_path = tcc_spatial_dist_path(current_uuid)
     if output_path.is_file():
+        logger.info("Reusing existing output: %s", output_path.name)
         return
 
     dump_name = slit_sample_path(conf, current_uuid)
@@ -50,12 +53,12 @@ def main():
         z_mid += z.mean()
     z_mid /= len(frames)
 
-    print("Running the TCC")
+    logger.info("Running TCC")
     tcc_parser = tcc.Parser("tcc")
     tcc_parser.run(dump_name, fake_box, Raw=True, clusts=True, **tcc_parameters)
     tcc_parser.parse()
 
-    print("Calculate the Statistics")
+    logger.info("Calculating statistics")
     bins = np.linspace(-z_mid, z_mid, nbins)
     bin_centres = (bins[1:] + bins[:-1]) / 2
 
@@ -88,6 +91,7 @@ def main():
         bin_centres=bin_centres,
         populations=populations,
     )
+    logger.info("Saved TCC spatial distribution: %s", output_path.name)
 
 
 if __name__ == "__main__":

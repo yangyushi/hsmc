@@ -8,19 +8,20 @@ from scipy.optimize import curve_fit
 import hsmc
 from common.slit_setup import create_slit_system
 from common.workflow_support import (
+    active_workflow_uuid,
     figure_path,
+    get_workflow_logger,
     isf_arrays_path,
     isf_metadata_path,
     load_config,
     snap_dump_frequency,
-    workflow_uuid,
-    write_workflow_log,
 )
 
 
 def main():
     conf = load_config()
-    current_uuid = workflow_uuid()
+    current_uuid = active_workflow_uuid()
+    logger = get_workflow_logger("isf", current_uuid)
 
     length = int(conf["ISF"]["length"])
     jump = int(conf["ISF"]["jump"])
@@ -35,14 +36,11 @@ def main():
     vf_crystal = float(conf["Boundary"]["vf_crystal"])
     z_final = float(conf["Boundary"]["z"])
     kind = conf["Boundary"]["kind"]
-
-    write_workflow_log(
-        "stage_start",
-        "isf",
-        current_uuid=current_uuid,
-        kind=kind,
-        length=length,
-        jump=jump,
+    logger.info(
+        "Building ISF system: kind=%s, length=%s, jump=%s",
+        kind,
+        length,
+        jump,
     )
 
     state = create_slit_system(
@@ -59,8 +57,8 @@ def main():
     indices_to_move = state["indices_to_move"]
     box = state["box"]
 
-    print(system)
-    print(f"Do particles overlap? {system.report_overlap()}")
+    logger.info("System initialized: %s", system)
+    logger.info("Particle overlap detected: %s", system.report_overlap())
 
     trajectory = np.empty((length, len(indices_to_move), 3))
     for i in range(length):
@@ -106,17 +104,17 @@ def main():
     with open(isf_metadata_path(current_uuid), "w") as f:
         json.dump(isf_metadata, f, indent=2)
 
-    print(f"Relaxation Time: {tau_sweeps:.4f} sweeps")
-    print(f"Recommended dump frequency: {recommended_dump_frequency}")
-
-    write_workflow_log(
-        "isf_fit",
-        "isf",
-        current_uuid=current_uuid,
-        tau_sweeps=f"{tau_sweeps:.6f}",
-        recommended_dump_frequency=recommended_dump_frequency,
-        metadata_file=isf_metadata_path(current_uuid).name,
-        array_file=isf_arrays_path(current_uuid).name,
+    logger.info("Relaxation time: %.4f sweeps", tau_sweeps)
+    logger.info(
+        "Recommended dump frequency: %s",
+        recommended_dump_frequency,
+    )
+    logger.info(
+        "Saved ISF fit: tau_sweeps=%.6f, dump_frequency=%s, metadata=%s, arrays=%s",
+        tau_sweeps,
+        recommended_dump_frequency,
+        isf_metadata_path(current_uuid).name,
+        isf_arrays_path(current_uuid).name,
     )
 
     if plot_isf:
@@ -139,14 +137,7 @@ def main():
         if show_isf:
             plt.show()
         plt.close()
-
-    write_workflow_log(
-        "stage_end",
-        "isf",
-        current_uuid=current_uuid,
-        tau_sweeps=f"{tau_sweeps:.6f}",
-        recommended_dump_frequency=recommended_dump_frequency,
-    )
+    logger.info("Completed ISF analysis")
 
 
 if __name__ == "__main__":

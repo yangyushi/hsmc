@@ -8,18 +8,18 @@ import tcc
 
 import hsmc
 from common.workflow_support import (
+    active_workflow_uuid,
     bulk_box_path,
     bulk_sample_path,
     box_path,
     cluster_population_mapping,
     density_profile_path,
     figure_path,
+    get_workflow_logger,
     load_config,
     resolve_dump_frequency,
     slit_sample_path,
     tcc_bulk_path,
-    workflow_uuid,
-    write_workflow_log,
 )
 
 mpl.rcParams["font.size"] = 18
@@ -27,7 +27,8 @@ mpl.rcParams["font.size"] = 18
 
 def main():
     conf = load_config()
-    current_uuid = workflow_uuid()
+    current_uuid = active_workflow_uuid()
+    logger = get_workflow_logger("bulk", current_uuid)
 
     n_particle = int(conf["System"]["n"])
     vf_init = float(conf["System"]["vf_init"])
@@ -39,12 +40,10 @@ def main():
     dump_frequency_bulk = resolve_dump_frequency(
         dump_frequency_bulk_config, current_uuid
     )
-    write_workflow_log(
-        "resolved_dump_frequency",
-        "bulk",
-        current_uuid=current_uuid,
-        configured_value=dump_frequency_bulk_config,
-        dump_frequency=dump_frequency_bulk,
+    logger.info(
+        "Resolved dump frequency: %s -> %s",
+        dump_frequency_bulk_config,
+        dump_frequency_bulk,
     )
 
     slit_box_path = box_path(current_uuid)
@@ -58,7 +57,7 @@ def main():
         engine="pandas",
     )
 
-    print("Making the density profile")
+    logger.info("Building density profile")
     density_path = density_profile_path(current_uuid)
     if not density_path.is_file():
         be = np.linspace(0, box[-1], 1000)
@@ -93,13 +92,11 @@ def main():
     sample_bulk_path = bulk_sample_path(current_uuid)
     current_bulk_box_path = bulk_box_path(current_uuid)
     if not sample_bulk_path.is_file() or not current_bulk_box_path.is_file():
-        write_workflow_log(
-            "stage_start",
-            "bulk",
-            current_uuid=current_uuid,
-            dump_frequency=dump_frequency_bulk,
-            sweep_total=sweep_total_bulk,
-            output=sample_bulk_path.name,
+        logger.info(
+            "Generating bulk reference: dump_frequency=%s, sweep_total=%s, output=%s",
+            dump_frequency_bulk,
+            sweep_total_bulk,
+            sample_bulk_path.name,
         )
         bulk_vf = hsmc.analysis.get_bulk_vf(
             slit_frames,
@@ -120,8 +117,11 @@ def main():
         system.fill_hs()
         system.crush(bulk_vf, 0.01)
 
-        print(system)
-        print(f"Do particles overlap in Bulk? {system.report_overlap()}")
+        logger.info("Bulk system initialized: %s", system)
+        logger.info(
+            "Bulk particle overlap detected: %s",
+            system.report_overlap(),
+        )
 
         for _ in range(sweep_equilibrium):
             system.sweep()
@@ -144,22 +144,16 @@ def main():
         with open(current_bulk_box_path, "w") as f:
             json.dump(system.get_box(), f)
 
-        write_workflow_log(
-            "stage_end",
-            "bulk",
-            current_uuid=current_uuid,
-            output=sample_bulk_path.name,
+        logger.info(
+            "Completed bulk sampling: output=%s",
+            sample_bulk_path.name,
         )
     else:
-        write_workflow_log(
-            "reuse_existing_output",
-            "bulk",
-            current_uuid=current_uuid,
-            output=sample_bulk_path.name,
-        )
+        logger.info("Reusing existing output: %s", sample_bulk_path.name)
 
     bulk_summary_path = tcc_bulk_path(current_uuid)
     if not bulk_summary_path.is_file():
+        logger.info("Running TCC on bulk reference")
         tcc_parameters = {
             "voronoi_parameter": 0.82,
             "rcutAA": 1.8,
@@ -190,6 +184,7 @@ def main():
             cluster_names=cluster_names,
             populations=populations
         )
+        logger.info("Saved bulk TCC summary: %s", bulk_summary_path.name)
 
 
 if __name__ == "__main__":

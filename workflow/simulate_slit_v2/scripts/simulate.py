@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,19 +8,20 @@ from tqdm import tqdm
 
 from common.slit_setup import create_slit_system
 from common.workflow_support import (
+    active_workflow_uuid,
     box_path,
     figure_path,
+    get_workflow_logger,
     load_config,
     resolve_dump_frequency,
     slit_sample_path,
-    workflow_uuid,
-    write_workflow_log,
 )
 
 
 def main():
     conf = load_config()
-    current_uuid = workflow_uuid()
+    current_uuid = active_workflow_uuid()
+    logger = get_workflow_logger("simulate", current_uuid)
 
     n_particles = int(conf["System"]["n"])
     sigma = 1
@@ -36,21 +38,14 @@ def main():
     slit_box_path = box_path(current_uuid)
 
     if sample_path.is_file() and slit_box_path.is_file():
-        write_workflow_log(
-            "reuse_existing_output",
-            "simulate",
-            current_uuid=current_uuid,
-            output=sample_path.name,
-        )
+        logger.info("Reusing existing output: %s", sample_path.name)
         return
 
     dump_frequency = resolve_dump_frequency(dump_frequency_config, current_uuid)
-    write_workflow_log(
-        "resolved_dump_frequency",
-        "simulate",
-        current_uuid=current_uuid,
-        configured_value=dump_frequency_config,
-        dump_frequency=dump_frequency,
+    logger.info(
+        "Resolved dump frequency: %s -> %s",
+        dump_frequency_config,
+        dump_frequency,
     )
 
     state = create_slit_system(
@@ -81,8 +76,8 @@ def main():
     plt.savefig(figure_path("system_start", ".png", current_uuid))
     plt.close(fig)
 
-    print(system)
-    print(f"Do particles overlap? {system.report_overlap()}")
+    logger.info("System initialized: %s", system)
+    logger.info("Particle overlap detected: %s", system.report_overlap())
 
     pos = system.copy_positions()
     fig = plt.figure(figsize=(10, 4))
@@ -103,23 +98,20 @@ def main():
     with open(slit_box_path, "w") as f:
         json.dump(system.get_box(), f)
 
-    print("reaching equilibrium")
-    for _ in tqdm(range(sweep_equilibrium)):
+    logger.info("Reaching equilibrium")
+    for _ in tqdm(range(sweep_equilibrium), file=sys.stderr):
         system.sweep()
 
     sample_path.write_text("")
     with open(sample_path, "a") as f_xyz:
-        print("starting sampling")
-        write_workflow_log(
-            "stage_start",
-            "simulate",
-            current_uuid=current_uuid,
-            dump_frequency=dump_frequency,
-            sweep_total=sweep_total,
-            output=sample_path.name,
+        logger.info(
+            "Starting sampling: dump_frequency=%s, sweep_total=%s, output=%s",
+            dump_frequency,
+            sweep_total,
+            sample_path.name,
         )
         n_move = len(indices_to_move)
-        for frame in tqdm(range(sweep_total)):
+        for frame in tqdm(range(sweep_total), file=sys.stderr):
             system.sweep()
             if frame % dump_frequency == 0:
                 tmp = system.copy_positions().T[indices_to_move]
@@ -132,12 +124,10 @@ def main():
                     comments="",
                 )
 
-    write_workflow_log(
-        "stage_end",
-        "simulate",
-        current_uuid=current_uuid,
-        dump_frequency=dump_frequency,
-        output=sample_path.name,
+    logger.info(
+        "Completed sampling: dump_frequency=%s, output=%s",
+        dump_frequency,
+        sample_path.name,
     )
 
 

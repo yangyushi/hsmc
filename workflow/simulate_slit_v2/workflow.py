@@ -12,11 +12,11 @@ from common.workflow_support import (
     isf_arrays_path,
     isf_metadata_path,
     isf_ready,
+    get_workflow_logger,
     read_json,
     remove_generated_outputs,
     run_stage,
     workflow_uuid,
-    write_workflow_log,
 )
 from scripts.validate_workflow import validate_environment
 
@@ -28,16 +28,15 @@ def start_workflow() -> int:
     except subprocess.CalledProcessError as exc:
         return exc.returncode
     current_uuid = workflow_uuid()
-    write_workflow_log("workflow_start", "workflow", current_uuid=current_uuid)
+    logger = get_workflow_logger("workflow", current_uuid)
+    logger.info("Starting workflow")
 
     if config_uses_auto():
         if isf_ready(current_uuid):
-            write_workflow_log(
-                "reuse_existing_output",
-                "isf",
-                current_uuid=current_uuid,
-                metadata_file=isf_metadata_path(current_uuid).name,
-                array_file=isf_arrays_path(current_uuid).name,
+            logger.info(
+                "Reusing existing ISF output: metadata=%s, arrays=%s",
+                isf_metadata_path(current_uuid).name,
+                isf_arrays_path(current_uuid).name,
             )
         else:
             try:
@@ -57,7 +56,7 @@ def start_workflow() -> int:
             run_stage(module_name, stage, current_uuid=current_uuid)
         except subprocess.CalledProcessError as exc:
             return exc.returncode
-    write_workflow_log("workflow_end", "workflow", current_uuid=current_uuid)
+    logger.info("Completed workflow")
     return 0
 
 

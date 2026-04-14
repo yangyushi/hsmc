@@ -6,12 +6,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from common.workflow_support import (
+    active_workflow_uuid,
     box_path,
     figure_path,
+    get_workflow_logger,
     load_config,
     tcc_bulk_path,
     tcc_spatial_dist_path,
-    workflow_uuid,
 )
 
 mpl.rcParams["font.family"] = "sans-serif"
@@ -30,8 +31,10 @@ def _load_cluster_map(npz_path):
 
 def main():
     conf = load_config()
-    current_uuid = workflow_uuid()
+    current_uuid = active_workflow_uuid()
+    logger = get_workflow_logger("plot", current_uuid)
     kind = conf["Boundary"]["kind"]
+    logger.info("Generating plots for boundary kind %s", kind)
 
     tcc_dist, spatial_data = _load_cluster_map(tcc_spatial_dist_path(current_uuid))
     tcc_bulk = _load_cluster_map(tcc_bulk_path(current_uuid))
@@ -73,7 +76,8 @@ def main():
 
     plt.gcf().set_size_inches(12, 10)
     plt.tight_layout()
-    plt.savefig(figure_path("tcc_result_1", ".pdf", current_uuid))
+    result_1_path = figure_path("tcc_result_1", ".pdf", current_uuid)
+    plt.savefig(result_1_path)
     plt.close()
 
     fig, ax = plt.subplots(1, 1)
@@ -105,7 +109,8 @@ def main():
     plt.legend(handlelength=1.0, ncol=2, loc="lower center")
     plt.gcf().set_size_inches(8, 5)
     plt.tight_layout()
-    plt.savefig(figure_path("tcc_result_2", ".pdf", current_uuid))
+    result_2_path = figure_path("tcc_result_2", ".pdf", current_uuid)
+    plt.savefig(result_2_path)
     plt.close()
 
     cluster_names = ["sp5c", "8A", "10B", "FCC", "HCP"]
@@ -130,8 +135,15 @@ def main():
     plt.gcf().set_size_inches(8, 5)
     plt.yscale("log")
     plt.tight_layout()
-    plt.savefig(figure_path("tcc_result_3", ".pdf", current_uuid))
+    result_3_path = figure_path("tcc_result_3", ".pdf", current_uuid)
+    plt.savefig(result_3_path)
     plt.close()
+    logger.info(
+        "Saved plots: %s, %s, %s",
+        result_1_path.name,
+        result_2_path.name,
+        result_3_path.name,
+    )
 
 
 if __name__ == "__main__":

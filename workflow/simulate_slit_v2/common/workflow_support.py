@@ -6,6 +6,7 @@ import re
 import sys
 import json
 import math
+import logging
 import shutil
 import hashlib
 import subprocess
@@ -27,8 +28,11 @@ HASH_SIZE = 8
 TCC_DIR = ROOT_DIR / "tcc"
 UUID_PATTERN = re.compile(r"(?P<uuid>[0-9a-f]{64})")
 WORKFLOW_CODE_DIRS = ("common", "scripts")
+WORKFLOW_LOGGER_NAME = "workflow"
+DEFAULT_WORKFLOW_UUID = "-"
 
 JsonObject = dict[str, object]
+_LOGGER_STATE: tuple[Path | None, bool] | None = None
 
 
 class SupportsToDict(Protocol):
@@ -36,6 +40,140 @@ class SupportsToDict(Protocol):
 
     def to_dict(self) -> Mapping[object, object]:
         """Return the summary as a mapping."""
+
+
+class WorkflowLogFormatter(logging.Formatter):
+    """Render compact workflow log lines."""
+
+    def formatTime(self, record, datefmt=None) -> str:
+        timestamp = datetime.fromtimestamp(record.created, timezone.utc)
+        return timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    def format(self, record: logging.LogRecord) -> str:
+        workflow_uuid = getattr(record, "workflow_uuid", DEFAULT_WORKFLOW_UUID)
+        message = record.getMessage()
+        if record.exc_info and not record.exc_text:
+            record.exc_text = self.formatException(record.exc_info)
+        if record.exc_text:
+            message = f"{message}\n{record.exc_text}"
+        return (
+            f"[{self.formatTime(record)}] "
+            f"[{record.levelname}] "
+            f"[{workflow_uuid}] "
+            f"[{record.process}] "
+            f"{message}"
+        )
+
+
+class WorkflowLoggerAdapter(logging.LoggerAdapter):
+    """Bind workflow UUID and stage context to log messages."""
+
+    def process(self, msg, kwargs):
+        extra = dict(kwargs.get("extra", {}))
+        extra.setdefault(
+            "workflow_uuid",
+            self.extra.get("workflow_uuid", DEFAULT_WORKFLOW_UUID),
+        )
+        kwargs["extra"] = extra
+        stage = self.extra.get("stage")
+        message = str(msg)
+        if stage and not message.startswith(f"{stage}: "):
+            message = f"{stage}: {message}"
+        return message, kwargs
+
+
+def active_workflow_uuid(current_uuid: str | None = None) -> str | None:
+    """Resolve the active workflow UUID from arguments, env, or config."""
+
+    if current_uuid is not None:
+        return current_uuid
+    env_uuid = os.environ.get("WORKFLOW_UUID")
+    if env_uuid:
+        return env_uuid
+    if CONFIG_PATH.is_file():
+        return workflow_uuid()
+    return None
+
+
+def _reset_workflow_logging() -> None:
+    """Clear workflow logger handlers so setup can be repeated safely."""
+
+    global _LOGGER_STATE
+
+    logger = logging.getLogger(WORKFLOW_LOGGER_NAME)
+    for handler in list(logger.handlers):
+        logger.removeHandler(handler)
+        handler.close()
+    _LOGGER_STATE = None
+
+
+def configure_workflow_logging(
+    current_uuid: str | None = None,
+    console: bool = True,
+) -> logging.Logger:
+    """Configure the shared workflow logger for the active UUID."""
+
+    global _LOGGER_STATE
+
+    resolved_uuid = active_workflow_uuid(current_uuid)
+    log_path = (
+        root_log_path(resolved_uuid) if resolved_uuid is not None else None
+    )
+    desired_state = (log_path, console)
+    logger = logging.getLogger(WORKFLOW_LOGGER_NAME)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+    if logger.handlers and _LOGGER_STATE == desired_state:
+        return logger
+
+    _reset_workflow_logging()
+    logger = logging.getLogger(WORKFLOW_LOGGER_NAME)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    formatter = WorkflowLogFormatter()
+
+    if log_path is not None:
+        file_handler = logging.FileHandler(log_path, encoding="utf-8")
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+    if console:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+
+    _LOGGER_STATE = desired_state
+    return logger
+
+
+def get_workflow_logger(
+    stage: str | None = None,
+    current_uuid: str | None = None,
+    console: bool = True,
+) -> WorkflowLoggerAdapter:
+    """Return a stage-aware workflow logger adapter."""
+
+    resolved_uuid = active_workflow_uuid(current_uuid)
+    configure_workflow_logging(resolved_uuid, console=console)
+    logger_name = WORKFLOW_LOGGER_NAME
+    if stage:
+        logger_name = f"{WORKFLOW_LOGGER_NAME}.{stage}"
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(logging.INFO)
+    return WorkflowLoggerAdapter(
+        logger,
+        {
+            "workflow_uuid": resolved_uuid or DEFAULT_WORKFLOW_UUID,
+            "stage": stage,
+        },
+    )
+
+
+def _format_log_fields(fields: Mapping[str, object]) -> str:
+    """Render compatibility key/value fields into readable text."""
+
+    return ", ".join(f"{key}={fields[key]}" for key in sorted(fields))
 
 
 def load_config(config_path: Path = CONFIG_PATH) -> configparser.ConfigParser:
@@ -201,25 +339,19 @@ def write_workflow_log(
     current_uuid: str | None = None,
     **fields: object,
 ) -> None:
-    """Append one structured line to the workflow log."""
+    """Compatibility wrapper for callers not yet using loggers directly."""
 
-    if current_uuid is None:
-        if not CONFIG_PATH.is_file():
-            return
-        current_uuid = workflow_uuid()
+    resolved_uuid = active_workflow_uuid(current_uuid)
+    if resolved_uuid is None:
+        return
 
-    log_file = root_log_path(current_uuid)
-    timestamp = datetime.now(timezone.utc).isoformat()
-    payload = {
-        "timestamp": timestamp,
-        "stage": stage,
-        "message": message,
-        "workflow_uuid": current_uuid,
-    }
-    payload.update(fields)
-    parts = [f"{key}={payload[key]}" for key in sorted(payload)]
-    with log_file.open("a", encoding="utf-8") as f:
-        f.write(" ".join(parts) + "\n")
+    logger = get_workflow_logger(stage, resolved_uuid)
+    event_text = message.replace("_", " ")
+    details = _format_log_fields(fields)
+    if details:
+        logger.info("%s (%s)", event_text, details)
+        return
+    logger.info("%s", event_text)
 
 
 def config_uses_auto(config_path: Path = CONFIG_PATH) -> bool:
@@ -296,9 +428,9 @@ def run_stage(
     Run one workflow stage module with the current UUID in its environment.
     """
 
-    if current_uuid is None and CONFIG_PATH.is_file():
-        current_uuid = workflow_uuid()
-    write_workflow_log("stage_start", stage, current_uuid=current_uuid)
+    current_uuid = active_workflow_uuid(current_uuid)
+    logger = get_workflow_logger(stage, current_uuid)
+    logger.info("Starting stage")
     env = os.environ.copy()
     env["WORKFLOW_UUID"] = current_uuid
     pythonpath_entries = [str(ROOT_DIR)]
@@ -316,16 +448,14 @@ def run_stage(
             check=True,
         )
     except subprocess.CalledProcessError as exc:
-        write_workflow_log(
-            "failure",
-            stage,
-            current_uuid=current_uuid,
-            exit_code=exc.returncode,
-            module=module_name,
+        logger.error(
+            "Stage failed with exit code %s while running %s",
+            exc.returncode,
+            module_name,
         )
         raise
 
-    write_workflow_log("stage_end", stage, current_uuid=current_uuid)
+    logger.info("Completed stage")
 
 
 def cluster_population_mapping(

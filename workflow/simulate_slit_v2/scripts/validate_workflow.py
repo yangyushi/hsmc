@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 import configparser
 import importlib
-import sys
 
 from common.slit_setup import VALID_PLANES
 from common.workflow_support import (
+    active_workflow_uuid,
     CONFIG_PATH,
     CONFIG_TEMPLATE_PATH,
     ensure_output_directories,
+    get_workflow_logger,
     is_auto,
     load_config,
     parse_numeric_frequency,
-    workflow_uuid,
-    write_workflow_log,
 )
 
 
@@ -23,16 +22,12 @@ VALID_BOUNDARY_KINDS = ("hardwall", *VALID_PLANES)
 def fail(
     message: str, current_uuid: str | None = None, **fields: object
 ) -> int:
-    write_workflow_log(
-        "failure",
-        "validate_workflow",
-        current_uuid=current_uuid,
-        error=message,
-        **fields
-    )
-    print(message, file=sys.stderr)
-    for key, value in fields.items():
-        print(f"{key}: {value}", file=sys.stderr)
+    logger = get_workflow_logger("validate_workflow", current_uuid)
+    if fields:
+        details = ", ".join(f"{key}={fields[key]}" for key in sorted(fields))
+        logger.error("%s (%s)", message, details)
+    else:
+        logger.error("%s", message)
     return 1
 
 
@@ -173,7 +168,8 @@ def validate_environment(
             " and fill in the values."
         ), None
 
-    current_uuid = workflow_uuid()
+    current_uuid = active_workflow_uuid()
+    logger = get_workflow_logger("validate_workflow", current_uuid)
     try:
         validate_configuration()
     except ValueError as exc:
@@ -182,11 +178,6 @@ def validate_environment(
             current_uuid=current_uuid,
             error_detail=str(exc),
         ), current_uuid
-
-    if write_artifacts:
-        write_workflow_log(
-            "stage_start", "validate_workflow", current_uuid=current_uuid
-        )
 
     missing_modules = []
     for module_name in REQUIRED_MODULES:
@@ -218,9 +209,7 @@ def validate_environment(
         ), current_uuid
 
     if write_artifacts:
-        write_workflow_log(
-            "stage_end", "validate_workflow", current_uuid=current_uuid
-        )
+        logger.info("Environment and configuration validated")
     if emit_output:
         print(f"workflow_uuid={current_uuid}")
     return 0, current_uuid
