@@ -177,7 +177,8 @@ class HSMC {
   public:
     HSMC(
         int n, std::vector<double> box,
-        std::vector<bool> is_pbc, std::vector<bool> is_hard, double r_skin
+        std::vector<bool> is_pbc, std::vector<bool> is_hard, double r_skin,
+        bool scale_fixed_particles = true
     );
 
     int dim_ = 3;
@@ -226,6 +227,7 @@ class HSMC {
     std::vector<bool> is_hard_;
     std::vector<int> hard_dim_;
     std::vector<int> rand_indices_;
+    bool scale_fixed_particles_ = true;
     VerletList<Coord3D> vlist_;
     int ldi_ = 0;
     std::mt19937 rng_;

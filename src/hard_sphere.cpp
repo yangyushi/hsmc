@@ -22,7 +22,7 @@ std::vector<int> unravel_index(int index, const std::vector<int>& shape) {
 HSMC::HSMC(
     int n, std::vector<double> box,
     std::vector<bool> is_pbc, std::vector<bool> is_hard,
-    double r_skin
+    double r_skin, bool scale_fixed_particles
 ) : n_{n},
     box_{std::move(box)},
     positions_{dim_, n},
@@ -30,6 +30,7 @@ HSMC::HSMC(
     total_disp_{dim_, n},
     is_pbc_{std::move(is_pbc)},
     is_hard_{std::move(is_hard)},
+    scale_fixed_particles_{scale_fixed_particles},
     vlist_{1.0, r_skin},
     rng_{std::random_device{}()},
     unit_dist_{0.0, 1.0},
@@ -234,7 +235,14 @@ void HSMC::crush(double target_vf, double delta_vf) {
     while (vf < target_vf) {
         const double vf_new = (target_vf - vf < delta_vf) ? target_vf : vf + delta_vf;
         const double scale = std::pow(vf / vf_new, 1.0 / 3.0);
-        positions_.array() *= scale;
+        if (scale_fixed_particles_) {
+            positions_.array() *= scale;
+        } else {
+            const Vec3D center = 0.5 * Vec3D{box_[0], box_[1], box_[2]};
+            for (int idx : rand_indices_) {
+                positions_.col(idx) = center + scale * (positions_.col(idx) - center);
+            }
+        }
         boundary_.rescale(scale);
         box_ = boundary_.box_;
         boundary_.fix_position(positions_);
@@ -261,7 +269,14 @@ void HSMC::crush_along_axis(double target_vf, double delta_vf, int axis) {
         const double vf_new = (target_vf - vf < delta_vf) ? target_vf : vf + delta_vf;
         const double scale = vf / vf_new;
 
-        positions_.row(axis).array() *= scale;
+        if (scale_fixed_particles_) {
+            positions_.row(axis).array() *= scale;
+        } else {
+            const double center = 0.5 * box_[axis];
+            for (int idx : rand_indices_) {
+                positions_(axis, idx) = center + scale * (positions_(axis, idx) - center);
+            }
+        }
         boundary_.rescale(scale, axis);
         box_ = boundary_.box_;
 

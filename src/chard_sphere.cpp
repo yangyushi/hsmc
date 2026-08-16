@@ -10,13 +10,14 @@ PYBIND11_MODULE(chard_sphere, m) {
         .def(
             py::init<
                 int, std::vector<double>, std::vector<bool>,
-                std::vector<bool>, double
+                std::vector<bool>, double, bool
             >(),
             py::arg("n"),
             py::arg("box"),
             py::arg("is_pbc"),
             py::arg("is_hard"),
-            py::arg("r_skin") = 4
+            py::arg("r_skin") = 4,
+            py::arg("scale_fixed_particles") = true
         )
         .def("fill_ideal_gas", &hsmc::HSMC::fill_ideal_gas)
         .def("fill_hs", &hsmc::HSMC::fill_hs)
