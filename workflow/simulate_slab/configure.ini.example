@@ -1,0 +1,57 @@
+[System]
+# number of mobile fluid particles
+n = 10000
+# initial total volume fraction (used to build the uncompressed box)
+vf_init = 0.28
+# target fluid volume fraction measured in the bulk region, i.e. the fluid
+# far away from the crystal surfaces (excluding the boundary layer)
+vf_final = 0.49
+# the value for building Verlet list, high value should be selected for low vf
+r_skin = 3.0
+
+[Run]
+# the sweep number to reach equilibrium
+equilibrium = 100000
+# the sweep number to sample
+total = 1000000
+# the sweep number to sample the bulk system, it will be less
+#    demanding because we don't need spatial distribution
+total_bulk = 100000
+# the frequency to save the configuration; integer or auto
+dump_frequency = auto
+
+# the frequency to save the configuration for bulk simulation
+#   it will be less demanding because we don't need spatial distribution
+#   integer or auto
+dump_frequency_bulk = auto
+# the filename to save the slab simulation configurations (fluid particles only)
+filename = sample_equilibrium.xyz
+
+[Boundary]
+# crystal structure: fcc or hcp
+crystal = fcc
+# Miller indices (h k l) of the exposed surface
+hkl = 1 1 1
+# packing fraction of the crystal slab (sets the lattice constant)
+vf_crystal = 0.545
+# thickness of the central crystal slab (sigma units)
+slab_thickness = 4.0
+# target elongation ratio z_final / Lx
+z_aspect = 4.0
+# minimum fluid gap above/below the slab (sigma units)
+min_gap = 5.0
+# thickness of the boundary layer next to each crystal surface that is
+# excluded from the state-point volume fraction calculation (sigma units)
+boundary_thickness = 2.0
+
+[Analyse]
+# the number of bins to discretise the space when calculating
+#   the spatial distribution of tcc clusters; 0 means auto-scale with z_final
+nbins = 1200
+
+[ISF]
+n = 1000
+show_isf = 1
+plot_isf = 1
+length = 100
+jump = 200

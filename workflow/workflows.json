@@ -9,6 +9,12 @@
       "name": "simulate_slit_v2",
       "bundle_dir": "simulate_slit_v2",
       "copy_dir": "simulate_slit_v2"
+    },
+    {
+      "name": "simulate_slab",
+      "bundle_dir": "simulate_slab",
+      "copy_dir": "simulate_slab"
     }
+
   ]
 }
