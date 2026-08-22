@@ -184,8 +184,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
-    command = args.command or "start"
+    command = args.command
 
+    if command is None:
+        return start_workflow(no_preview=False)
     if command == "start":
         return start_workflow(no_preview=args.no_preview)
     if command == "check":

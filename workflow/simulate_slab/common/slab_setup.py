@@ -5,10 +5,6 @@ surrounded by bulk fluid.  The target state point ``vf_final`` is the fluid
 volume fraction measured in the bulk region, i.e. the fluid far away from the
 crystal surfaces.  A ``boundary_thickness`` next to each surface is therefore
 excluded from the volume used to size the box.
-
-hsmc is still constructed with ``scale_fixed_particles=True`` and the isotropic
-scaling workaround below is used to prepare a dense fluid around the crystal
-without getting stuck in MC overlap removal.
 """
 
 from __future__ import annotations
@@ -187,13 +183,12 @@ def create_slab_system(
     is_hard = [False, False, False]
     system = hsmc.chard_sphere.HSMC(
         total_particles, box_init, is_pbc, is_hard, r_skin,
-        scale_fixed_particles=True,
     )
     system.load_positions(configuration.T)
     system.set_indices(indices_to_move)
     system.fill_hs()
 
-    system.crush(vf_total_final, 0.01)
+    system.crush(vf_total_final, 0.01, scale_fixed_particles=True)
 
     final_box = np.array(system.get_box())
     if not all(

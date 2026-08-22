@@ -177,8 +177,7 @@ class HSMC {
   public:
     HSMC(
         int n, std::vector<double> box,
-        std::vector<bool> is_pbc, std::vector<bool> is_hard, double r_skin,
-        bool scale_fixed_particles = true
+        std::vector<bool> is_pbc, std::vector<bool> is_hard, double r_skin
     );
 
     int dim_ = 3;
@@ -190,8 +189,8 @@ class HSMC {
     void fill_hs();
     void sweep();
 
-    void crush(double target_vf, double delta_vf);
-    void crush_along_axis(double target_vf, double delta_vf, int axis);
+    void crush(double target_vf, double delta_vf, bool scale_fixed_particles);
+    void crush_along_axis(double target_vf, double delta_vf, int axis, bool scale_fixed_particles);
 
     double get_vf() const {
         return static_cast<double>(n_) * M_PI / (boundary_.volume_ * 6.0);
@@ -227,7 +226,6 @@ class HSMC {
     std::vector<bool> is_hard_;
     std::vector<int> hard_dim_;
     std::vector<int> rand_indices_;
-    bool scale_fixed_particles_ = true;
     VerletList<Coord3D> vlist_;
     int ldi_ = 0;
     std::mt19937 rng_;

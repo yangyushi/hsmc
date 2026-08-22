@@ -10,25 +10,45 @@ PYBIND11_MODULE(chard_sphere, m) {
         .def(
             py::init<
                 int, std::vector<double>, std::vector<bool>,
-                std::vector<bool>, double, bool
+                std::vector<bool>, double
             >(),
             py::arg("n"),
             py::arg("box"),
             py::arg("is_pbc"),
             py::arg("is_hard"),
-            py::arg("r_skin") = 4,
-            py::arg("scale_fixed_particles") = true
+            py::arg("r_skin") = 4
         )
         .def("fill_ideal_gas", &hsmc::HSMC::fill_ideal_gas)
         .def("fill_hs", &hsmc::HSMC::fill_hs)
-        .def("crush", &hsmc::HSMC::crush)
-        .def("crush_along_axis", &hsmc::HSMC::crush_along_axis)
+        .def(
+            "crush",
+            &hsmc::HSMC::crush,
+            py::arg("target_vf"),
+            py::arg("delta_vf"),
+            py::arg("scale_fixed_particles") = true
+        )
+        .def(
+            "crush_along_axis",
+            &hsmc::HSMC::crush_along_axis,
+            py::arg("target_vf"),
+            py::arg("delta_vf"),
+            py::arg("axis"),
+            py::arg("scale_fixed_particles") = true
+        )
+        .def(
+            "set_indices",
+            &hsmc::HSMC::set_indices,
+            py::arg("indices")
+        )
+        .def(
+            "load_positions",
+            &hsmc::HSMC::load_positions,
+            py::arg("positions")
+        )
         .def("sweep", &hsmc::HSMC::sweep)
         .def("rebuild_nlist", &hsmc::HSMC::rebuild_nlist)
         .def("get_vf", &hsmc::HSMC::get_vf)
-        .def("load_positions", &hsmc::HSMC::load_positions)
         .def("copy_positions", &hsmc::HSMC::get_positions)
-        .def("set_indices", &hsmc::HSMC::set_indices)
         .def("report_overlap", &hsmc::HSMC::report_overlap)
         .def("get_box", &hsmc::HSMC::get_box)
         .def(

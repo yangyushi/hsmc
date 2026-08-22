@@ -2,6 +2,7 @@
 build*
 project
 reference
+compile_commands.json
 
 lib/**/*.so
 lib/**/*.a
